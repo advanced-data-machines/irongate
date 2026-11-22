@@ -8,6 +8,7 @@ import socket
 import subprocess
 import time
 from guest_common import CLIENT, GATEWAY, UPSTREAM, WORK, command, spawn
+import security
 
 
 def require(condition, message):
@@ -88,6 +89,7 @@ def run(children, report):
                   namespace=CLIENT)
     report["dns_probe"] = dns.stdout.strip()
     cases.append({"name": "authorized_bidirectional_tcp_and_dns", "passed": True})
+    security.admitted(children, report, control)
     require(not control("logout")["allowed"], "Logout left access authorized")
     require(not live.request(), "Existing TCP survived logout")
     live.close()
@@ -130,3 +132,4 @@ def run(children, report):
     require(drops > 0, "Crash guard was not independently exercised by kernel transit")
     report["crash_guard"] = {"kernel_ip_forward": 1, "forward_drop_packets": drops, "ruleset": guard}
     cases.append({"name": "crash_guard_with_kernel_routing_and_fixed_neighbors", "passed": True})
+    security.kernel_ipv6(children, report)

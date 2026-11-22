@@ -29,6 +29,12 @@ The [Linux packet lab](linux-packet-lab.md) passed seven live scenarios in fresh
 
 The accompanying checkpoint passed 122 Rust tests, 16 comparison-framework regressions and 10 host-only lab-contract tests. CRAP now analyzes 211 functions across 54 matched files. The CLI parser remains at 39.32; the new live `io::run` entry scores 207.02 with about 13% ordinary-test coverage. Guest execution is not merged into LCOV. That startup/coverage finding is open, not waived; retain the distinction between scenario evidence and coverage-backed quality evidence before launch.
 
+## Expanded acceptance checkpoint
+
+[`mvp-lab-v1`](lab-acceptance.md) now freezes the engineering targets separately from current one-client capacity. The live suite expands to eleven cases with positive-control/ingress/egress spoof evidence and a dedicated IPv6 kernel guard exercised after crash. Schema-2 reports retain the target contents/hash and explicitly mark scale/accounting qualification `not_run`; seven-case schema-1 reports cannot pass the expanded validator.
+
+The checkpoint has 124 passing Rust tests, 16 framework and 14 lab-contract regressions. Shared owner turns and descriptor validation have 100% ordinary-test line coverage. CRAP now analyzes 216 functions and flags only the existing CLI parser at 39.32; the earlier startup threshold finding is resolved, while guest bootstrap/serving coverage remains incomplete. See the [burndown](burndown.md) for product gates still pending.
+
 ## Release bundle contract
 
 Before publishing a release candidate, retain the following together:

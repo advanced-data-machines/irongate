@@ -15,7 +15,7 @@ import topology
 def main(run_id):
     guard(run_id)
     children, created = [], []
-    report = {"schema": 1, "scope": "isolated_packet_lab", "run_id": run_id,
+    report = {"schema": 2, "suite": "untagged-acceptance-v1", "scope": "isolated_packet_lab", "run_id": run_id,
               "status": "in_progress", "cases": [], "kernel": platform.release()}
     logs = []
     try:

@@ -1,0 +1,47 @@
+# Engineering lab acceptance targets, not measurements or production sizing.
+version = 1
+id = "mvp-lab-v1"
+
+[vm]
+vcpus = 4
+ram_mib = 8192
+disk_gib = 32
+external_nics = 0
+
+[functional]
+suite = "untagged-acceptance-v1"
+clients = 1
+networks = 1
+authorization_seconds = 5
+
+[scale]
+sessions = 64
+networks = 2
+active_generators = 8
+udp_payload_bytes = 1200
+offered_ip_bits_per_second = 100000000
+warmup_seconds = 10
+trial_seconds = 60
+trials = 3
+unexpected_packet_loss_max = 0
+added_latency_p99_max_ms = 5
+grant_and_revocation_max_ms = 250
+small_frame_ip_bytes = 64
+small_frame_offered_ip_bits_per_second = 10000000
+
+[stability]
+soak_seconds = 1800
+session_churn_per_second = 10
+steady_state_packet_session_allocations_max = 0
+packet_session_reserved_max_bytes = 16777216
+daemon_rss_max_bytes = 134217728
+rss_growth_after_warmup_max_bytes = 4194304
+
+[accounting]
+low_rate_client_ip_bits_per_second = 64000
+interim_interval_seconds = 60
+scheduled_send_lag_max_ms = 1000
+healthy_backend_ack_lag_max_ms = 5000
+counter_stage = "successful_packet_submission_ip_octets"
+nas_input = "subscriber_to_upstream"
+nas_output = "upstream_to_subscriber"

@@ -37,7 +37,9 @@ def prepare(created):
     rules = '''table inet ig_lab {
       chain input { type filter hook input priority 0; policy drop;
         iifname "down0" ip saddr 10.50.10.100 tcp dport 8080 accept; }
-      chain forward { type filter hook forward priority 0; policy drop; counter drop; }
+      chain forward { type filter hook forward priority 0; policy drop;
+        meta nfproto ipv6 counter drop comment "iglab-ipv6-deny";
+        counter drop comment "iglab-transit-deny"; }
       chain output { type filter hook output priority 0; policy drop;
         oifname "down0" ip daddr 10.50.10.100 tcp sport 8080 accept; }
     }'''

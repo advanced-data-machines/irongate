@@ -26,8 +26,8 @@ The immediate product goal is a working captive portal demonstration, followed b
 - [x] Add config-free host inventory with active-link evidence, driver-reported speed/duplex, bounded enumeration and explicit unavailable values.
 - [ ] Inventory deployed CoovaChilli options and integration contracts.
 - [ ] Capture a reproducible behavioral and performance baseline.
-- [ ] Set numerical packet-rate, latency, memory, revocation and accounting-lag targets for the first deployment profile.
-- [ ] Validate the preferred userspace forwarding design in a bounded experiment.
+- [x] Freeze the engineering lab acceptance target, including load, latency, loss, memory, revocation and healthy accounting lag; see [the versioned contract](lab-acceptance.md). Targets remain unvalidated.
+- [x] Prove the first one-client userspace forwarding path, independent kernel crash guard, and expanded spoof/IPv6 rejection in QEMU; load/capacity qualification remains pending.
 - [ ] Deliver configuration validation, host preflight and read-only NIC inspection before live access enforcement.
 - [x] Complete a bounded offline DHCP request/OFFER pilot with synthetic wire comparisons and measured replay allocation totals.
 - [x] Compare pinned original C option/OFFER/checksum functions offline, with independent wire checks, sanitizers and separate timing/allocation evidence.
@@ -37,6 +37,8 @@ The immediate product goal is a working captive portal demonstration, followed b
 - [x] Apply a real userspace policy cell in the isolated one-client Linux lab; verify DHCP/ARP, native local TCP, bidirectional transit, logout/expiry and persistent crash guarding.
 - [ ] Qualify the lab backend under the agreed load/profile and implement the real consent portal/provider boundary; current consent is a root-only test command.
 - [ ] Qualify the pilot with differential decoding, coverage-guided fuzzing and isolated VM interoperability.
+
+The [burndown checkpoint](burndown.md) separates implemented foundations and current evidence from the remaining portal/RADIUS/qualification gates. The [acceptance contract](lab-acceptance.md) freezes target numbers without claiming the one-client lab satisfies the larger scale profile.
 
 ## MVP delivery order
 

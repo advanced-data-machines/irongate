@@ -79,6 +79,8 @@ Use `just comparison-check` for framework regressions without C tools, or `just 
 - [Architecture and migration choices](docs/architecture.md)
 - [Memory policy and capacity budgeting](docs/memory.md)
 - [Roadmap and progress checklist](docs/roadmap.md)
+- [MVP burndown checkpoint](docs/burndown.md)
+- [Versioned lab targets and acceptance evidence](docs/lab-acceptance.md)
 - [CoovaChilli behavior and source map](docs/coova-compatibility.md)
 - [Setup, diagnostics and behavior verification](docs/operations.md)
 - [Ethernet inspection and tuning utilities](docs/nic-tools.md)

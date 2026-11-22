@@ -1,70 +1,20 @@
 //! Guest-only inherited AF_PACKET descriptors and bounded readiness dispatch.
 
-use super::{
-    profile::{self, Side},
-    state::State,
-};
-use rustix::event::{PollFd, PollFlags, Timespec, poll};
+use super::{owner, profile::Side, state::State, transport::Transport};
 use std::{
     fs::File,
     io::{self, Read, Write},
-    os::{
-        fd::AsFd,
-        unix::{fs::FileTypeExt, net::UnixDatagram},
-    },
-    time::Instant,
+    os::unix::net::UnixDatagram,
 };
 
 pub fn run(run_id: &str) -> Result<(), Box<dyn std::error::Error>> {
     guard(run_id)?;
-    // The guest supervisor binds raw sockets, disables offload and nonblocks them.
-    // Cloning known standard descriptors needs no unsafe FD construction.
-    let down = File::from(io::stdin().as_fd().try_clone_to_owned()?);
-    let up = File::from(io::stdout().as_fd().try_clone_to_owned()?);
-    if !down.metadata()?.file_type().is_socket() || !up.metadata()?.file_type().is_socket() {
-        return Err("lab requires two inherited packet sockets".into());
-    }
-    let control = UnixDatagram::bind(profile::CONTROL)?;
-    control.set_nonblocking(true)?;
+    let transport = Transport::inherited()?;
     let mut lease_slots = [irongate_core::lease::Slot::EMPTY];
     let mut session_slots = [irongate_core::session::Slot::EMPTY];
     let mut state = State::new(&mut lease_slots, &mut session_slots);
-    let start = Instant::now();
-    let mut input = [0; irongate_proto::MAX_FRAME_BYTES + 1];
-    let mut output = [0; irongate_proto::MAX_FRAME_BYTES];
     eprintln!("IronGate lab ready; run={run_id}; upstream initially denied");
-    loop {
-        state.advance(start.elapsed().as_secs())?;
-        wait(&down, &up, &control)?;
-        state.advance(start.elapsed().as_secs())?;
-        control_budget(&mut state, &control)?;
-        for side in [Side::Down, Side::Up] {
-            packet_budget(&mut state, side, [&down, &up], &mut input, &mut output)?;
-        }
-    }
-}
-
-fn wait(down: &File, up: &File, control: &UnixDatagram) -> Result<(), Box<dyn std::error::Error>> {
-    let mut descriptors = [
-        PollFd::new(down, PollFlags::IN),
-        PollFd::new(up, PollFlags::IN),
-        PollFd::new(control, PollFlags::IN),
-    ];
-    let timeout = Timespec {
-        tv_sec: 0,
-        tv_nsec: 100_000_000,
-    };
-    match poll(&mut descriptors, Some(&timeout)) {
-        Ok(_) | Err(rustix::io::Errno::INTR) => (),
-        Err(error) => return Err(error.into()),
-    }
-    if descriptors.iter().any(|fd| {
-        fd.revents()
-            .intersects(PollFlags::ERR | PollFlags::HUP | PollFlags::NVAL)
-    }) {
-        return Err("lab descriptor failed; forwarding stopped".into());
-    }
-    Ok(())
+    owner::serve(&mut state, &transport)
 }
 
 // Bounded controls precede data so logout cannot be starved by queued packets.
