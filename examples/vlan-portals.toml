@@ -1,0 +1,131 @@
+# Schema version 1: accepted by ig config check. Replace device/service details.
+# Gateway runtime and per-VLAN forwarding are not implemented yet.
+# Both VLANs use one subscriber trunk and different captive portals.
+schema_version = 1
+
+[gateway]
+name = "site-one"
+platform_mode = "managed"
+forwarding = "userspace"
+unmatched_subscriber_traffic = "drop" # No implicit native VLAN or portal fallback.
+
+[interfaces]
+upstream = "enp1s0"
+
+[[networks]]
+name = "guest"
+interface = "enp2s0"
+tagging = "8021q"
+vlan_id = 10
+session_limit = 200
+mtu = 1500
+ipv6 = "blocked"
+
+[networks.ipv4]
+subnet = "10.50.10.0/24"
+gateway = "10.50.10.1"
+
+[networks.dhcp]
+mode = "local"
+range_start = "10.50.10.20"
+range_end = "10.50.10.250"
+lease_seconds = 600
+
+[networks.dns]
+upstream_servers = ["192.0.2.53"]
+
+[networks.portal]
+mode = "external_uam"
+url = "https://guest.portal.example.test/login"
+secret_file = "/etc/irongate/secrets/guest-portal"
+
+[networks.authentication]
+provider = "radius"
+radius_pool = "central"
+
+[networks.accounting]
+sink = "radius"
+radius_pool = "central"
+interim_seconds = 60
+
+[networks.policy]
+radius_unavailable = "deny_new_sessions"
+existing_sessions_on_radius_outage = "retain_granted_policy"
+session_timeout_seconds = 3600
+idle_timeout_seconds = 300
+
+[[networks]]
+name = "staff"
+interface = "enp2s0"
+tagging = "8021q"
+vlan_id = 20
+session_limit = 200
+mtu = 1500
+ipv6 = "blocked"
+
+[networks.ipv4]
+subnet = "10.50.20.0/24"
+gateway = "10.50.20.1"
+
+[networks.dhcp]
+mode = "local"
+range_start = "10.50.20.20"
+range_end = "10.50.20.250"
+lease_seconds = 600
+
+[networks.dns]
+upstream_servers = ["192.0.2.53"]
+
+[networks.portal]
+mode = "external_uam"
+url = "https://staff.portal.example.test/login"
+secret_file = "/etc/irongate/secrets/staff-portal"
+
+[networks.authentication]
+provider = "radius"
+radius_pool = "central"
+
+[networks.accounting]
+sink = "radius"
+radius_pool = "central"
+interim_seconds = 60
+
+[networks.policy]
+radius_unavailable = "deny_new_sessions"
+existing_sessions_on_radius_outage = "retain_granted_policy"
+session_timeout_seconds = 28800
+idle_timeout_seconds = 900
+
+[[radius.pools]]
+name = "central"
+timeout_seconds = 3
+retries = 2
+
+[[radius.pools.servers]]
+name = "primary"
+address = "192.0.2.10" # Documentation addresses; replace before use.
+transport = "udp"
+auth_port = 1812
+accounting_port = 1813
+secret_file = "/etc/irongate/secrets/radius-primary"
+priority = 1
+status_probe = "disabled"
+
+[[radius.pools.servers]]
+name = "secondary"
+address = "192.0.2.11"
+transport = "udp"
+auth_port = 1812
+accounting_port = 1813
+secret_file = "/etc/irongate/secrets/radius-secondary"
+priority = 2
+status_probe = "disabled"
+
+[capacity]
+# Illustrative ceilings, not a benchmarked deployment profile.
+max_networks = 2
+max_sessions = 400
+packet_buffers = 1024
+packet_buffer_bytes = 2048
+pending_radius_requests = 128
+shaping_queue_packets = 512
