@@ -1,8 +1,9 @@
-//! IronGate's planned session and access-policy core.
+//! Bounded, allocator-independent network access foundations.
 //!
-//! This crate is intentionally an empty scaffold. Session storage, policy,
-//! accounting, and timers will be implemented against explicit capacity limits.
-//! Keep this crate independent of operating-system I/O and heap allocation.
+//! The DHCP lease engine borrows caller-owned storage and an explicit clock.
+//! Leases do not authorize access. Portal sessions and enforcement are future work.
 
 #![no_std]
 #![forbid(unsafe_code)]
+
+pub mod lease;

@@ -65,6 +65,8 @@ Run parser fuzzing and targeted state-machine tests for stale events, duplicates
 
 ## Benchmark artifacts and release gates
 
+The [release evidence contract](release-evidence.md) defines retained quality, coverage, correctness, allocation, comparison and live qualification artifacts. It also records the initial CRAP checkpoint and its open CLI parser finding. Generated files in `target/` are disposable; release archival and automated quality gates remain to be implemented before launch.
+
 Store benchmark scenario definitions and report schemas in the repository when the harness is implemented. Results include source revision, build profile, compiler, config hash, hardware/firmware/driver/kernel, NIC settings, CPU placement, generator version, traffic mix, duration, sample coverage and raw metrics. Keep secrets out of artifacts. Do not compare materially different environments without labeling the difference.
 
 Set numeric pass/fail thresholds after baseline discovery. At minimum, gate target packet capacity and tail latency, access-policy correctness, revocation latency under load, zero measured steady-state allocation on designated paths, memory stability, maximum accounting lag, defined overload behavior and diagnostics overhead. A performance gain cannot compensate for an enforcement or accounting correctness failure.

@@ -1,11 +1,16 @@
-//! Bounded DHCPv4 request views and direct-client broadcast OFFER encoding.
+//! Bounded DHCPv4 request views and direct-client OFFER/ACK/NAK encoding.
 
+mod client_message;
+mod encoding;
 mod offer;
 mod options;
+mod reply;
 mod request;
 
+pub use client_message::ClientMessage;
 pub use offer::{Offer, encode_offer};
 pub use options::{OptionView, Options};
+pub use reply::{Server, encode_ack, encode_nak};
 pub use request::{Request, parse};
 
 /// Maximum DHCP payload size accepted independently of outer framing.

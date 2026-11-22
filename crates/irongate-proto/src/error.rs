@@ -35,4 +35,8 @@ pub enum Error {
     NotDiscover,
     /// OFFER parameters contain an invalid address or zero lease duration.
     InvalidOffer,
+    /// ACK/NAK requires a consistent direct-client DHCPREQUEST.
+    NotRequest,
+    /// Reply identity, requested address or lease parameters do not match.
+    InvalidReply,
 }

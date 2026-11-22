@@ -1,6 +1,6 @@
 """Compare Valgrind heap totals with identical setup and zero/100000 replays.
 
-Requires a release build of the protocol_replay example and system Valgrind.
+Requires a release replay example and system Valgrind.
 No allocator wrappers, unsafe Rust, networking or third-party Python packages.
 """
 
@@ -41,8 +41,8 @@ def main():
     print(f"Setup totals (allocs, frees, bytes): {baseline}")
     print(f"100000 replays (allocs, frees, bytes): {replay}")
     if baseline != replay:
-        sys.exit("FAIL: packet replay changed heap allocation totals.")
-    print("PASS: zero additional heap allocations across 100000 tagged DISCOVER/OFFER replays.")
+        sys.exit("FAIL: replay changed heap allocation totals.")
+    print(f"PASS: zero additional heap allocations across 100000 {binary.name} replays.")
 
 
 if __name__ == "__main__":

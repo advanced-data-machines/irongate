@@ -23,6 +23,18 @@ impl<'a> RequestFrame<'a> {
     pub fn dhcp(&self) -> &dhcp::Request<'a> {
         &self.dhcp
     }
+    /// Decode a lease command with matching direct-client Ethernet/IP metadata.
+    /// Network selection must still come from a trusted receiving interface/VLAN
+    /// mapping, never an identifier supplied by the client.
+    pub fn lease_message(&self) -> Result<dhcp::ClientMessage, Error> {
+        if self.ethernet.source != self.dhcp.client_mac() {
+            return Err(Error::Malformed(Layer::Ethernet));
+        }
+        if self.ip.source != self.dhcp.client_ip() {
+            return Err(Error::Malformed(Layer::Ipv4));
+        }
+        self.dhcp.lease_message()
+    }
 }
 
 /// Validate one direct-client frame (UDP 68 to 67), without allocation.

@@ -1,6 +1,6 @@
 # IronGate roadmap
 
-The workspace provides offline `ig config check`, an initial read-only `ig doctor`, and an offline borrowed DHCP request/OFFER protocol pilot. Broader host preflight, live packet handling and runtime gateway behavior remain unimplemented. Checklist completion requires implementation evidence and the acceptance criteria below.
+The workspace provides offline `ig config check`, an initial read-only `ig doctor`, an offline borrowed DHCP request/reply protocol pilot, and bounded lease ownership. Broader host preflight, live packet handling and runtime gateway behavior remain unimplemented. Checklist completion requires implementation evidence and the acceptance criteria below.
 
 The immediate product goal is a working captive portal demonstration, followed by RADIUS-backed login and accounting through the same session engine. Both flows, plus two distinct VLAN profiles, are required for the lab MVP. The [backward-planned MVP implementation plan](mvp-plan.md) defines scope, dependencies, acceptance gates, branches and effort assumptions. It takes priority over expanding isolated parser features or microbenchmarks.
 
@@ -32,6 +32,8 @@ The immediate product goal is a working captive portal demonstration, followed b
 - [x] Complete a bounded offline DHCP request/OFFER pilot with synthetic wire comparisons and measured replay allocation totals.
 - [x] Compare pinned original C option/OFFER/checksum functions offline, with independent wire checks, sanitizers and separate timing/allocation evidence.
 - [x] Establish reusable comparison suites, saved same-implementation baselines, explicit match status and regression/failure-report contracts.
+- [x] Implement bounded offline lease ownership, direct-client DORA/renew/release/decline/expiry, ACK/NAK wire fixtures and measured lifecycle allocation totals.
+- [ ] Implement independent portal/session admission and bounded authorization effects; lease ownership alone does not authorize transit.
 - [ ] Qualify the pilot with differential decoding, coverage-guided fuzzing and isolated VM interoperability.
 
 ## MVP delivery order
@@ -70,12 +72,12 @@ The first doctor/preflight slice is complete; [its scope](doctor.md) excludes ro
 
 ### Protocol pilot checkpoint
 
-The operator slice and Rust 1.100 baseline are integrated into `release/0.1.x`. `feature/protocol-pilot` now implements the [offline Ethernet/IPv4/UDP/DHCP experiment](protocol-pilot.md): borrowed request views, caller-owned broadcast OFFER output, explicit work limits, synthetic wire fixtures and truncation/malformed/capacity tests. Initial Valgrind replay shows zero additional heap allocation across 100000 tagged request/OFFER operations. The [Coova comparison](coova-comparison.md) adds differential option/OFFER cases and independent checksum/structure checks; this C path also shows zero additional replay allocations. The [comparison framework](comparison-framework.md) preserves this evidence as versioned suites. These workloads do not establish leases, a complete DHCP server or live gateway performance. Finish this checkpoint, then work through the demo contract and MVP sequence above.
+The operator slice and Rust 1.100 baseline are integrated into `release/0.1.x`. The merged protocol checkpoint implements the [offline Ethernet/IPv4/UDP/DHCP experiment](protocol-pilot.md): borrowed request views, caller-owned broadcast OFFER output, explicit work limits, synthetic wire fixtures and truncation/malformed/capacity tests. Initial Valgrind replay shows zero additional heap allocation across 100000 tagged request/OFFER operations. The [Coova comparison](coova-comparison.md) adds differential option/OFFER cases and independent checksum/structure checks; this C path also shows zero additional replay allocations. The [comparison framework](comparison-framework.md) preserves this evidence as versioned suites. These workloads do not establish leases, a complete DHCP server or live gateway performance. The [lease foundation](lease-core.md) now adds offline address ownership and ACK/NAK replies on `feature/lease-core`, with zero additional measured heap allocation across 100000 complete lifecycle replays. Independent session/admission ownership and live interoperability remain outstanding; M1 is not complete.
 
 Clearer speed labels, Wi-Fi rate reporting and broader host preflight remain follow-ups; they do not block the protocol experiment. Record the first deployment's behavior and numerical targets alongside the pilot so its eventual benchmarks have useful acceptance criteria.
 
 1. Freeze the MVP acceptance contract and disposable-lab ownership, including a representative deployment profile.
-2. Implement bounded lease/session ownership and required DHCP lifecycle; extend comparison/fuzz cases for those actual paths.
+2. Review the implemented offline lease foundation; add independent session/admission ownership and bounded effects. Extend C comparisons and fuzzing for those actual paths.
 3. Prove userspace forwarding, native local portal reachability, return traffic and failure guards in the isolated topology.
 4. Deliver the local consent portal and record/diagnostic walkthrough.
 5. Add HTTPS login and RADIUS authentication/accounting without changing session/policy ownership.

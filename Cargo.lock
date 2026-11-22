@@ -70,6 +70,9 @@ version = "0.1.0"
 [[package]]
 name = "irongate-proto"
 version = "0.1.0"
+dependencies = [
+ "irongate-core",
+]
 
 [[package]]
 name = "irongated"

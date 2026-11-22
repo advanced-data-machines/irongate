@@ -41,13 +41,13 @@ just ig config check --config examples/standalone.toml --json
 
 | Crate | Responsibility | Current state |
 | --- | --- | --- |
-| `irongate-core` | Session ownership, policy, accounting, quotas, and timers | Empty `no_std` library; no dependencies or allocator imported |
-| `irongate-proto` | Borrowed protocol parsing and bounded encoding | Offline Ethernet/IPv4/UDP/DHCP request and OFFER pilot; `no_std`, no dependencies or allocator imported |
+| `irongate-core` | Session ownership, policy, accounting, quotas, and timers | Offline bounded DHCP lease ownership, explicit expiry effects and generation-safe handles; `no_std`, no dependencies or allocator imported |
+| `irongate-proto` | Borrowed protocol parsing and bounded encoding | Offline Ethernet/IPv4/UDP/DHCP requests and OFFER/ACK/NAK; `no_std`, no runtime dependencies or allocator imported |
 | `irongate-config` | Schema, cross-field checks and minimal host requirements | Bounded input and findings; borrowed TOML views where supported |
 | `irongate-cli` | Operator command `ig` | `config check`, passive `doctor`, text/JSON results, help and version |
 | `irongated` | Host process, configuration, adapters, and event loop | Prints scaffold status and exits |
 
-Use Rust 1.100 or newer with edition 2024 support. Validation used Rust 1.100.0, matching the declared minimum. This baseline permits evaluation of the stable allocator API; no custom allocator is currently used. Four direct third-party crates support configuration/address parsing and JSON output; see the [dependency policy](docs/dependencies.md). The core and protocol crates remain dependency-free. Offline builds require dependencies to have been cached already.
+Use Rust 1.100 or newer with edition 2024 support. Validation used Rust 1.100.0, matching the declared minimum. This baseline permits evaluation of the stable allocator API; no custom allocator is currently used. Four direct third-party crates support configuration/address parsing and JSON output; see the [dependency policy](docs/dependencies.md). The core and protocol libraries have no third-party or runtime dependencies; protocol examples/tests use the workspace core as a development dependency. Offline builds require dependencies to have been cached already.
 
 ```sh
 cargo build --workspace --offline
@@ -58,11 +58,13 @@ cargo test --workspace --offline
 cargo doc --workspace --no-deps --offline
 ```
 
-Tests cover the example profiles, conflicting VLANs/subnets, provider references, resource limits, malformed input, redaction and actual CLI output/exit codes. Protocol forwarding and session behavior remain unimplemented. A successful configuration check establishes internal consistency for the supported profile, not gateway correctness or measured capacity.
+Tests cover the example profiles, conflicting VLANs/subnets, provider references, resource limits, malformed input, redaction and actual CLI output/exit codes. Live forwarding and portal/session authorization remain unimplemented. A successful configuration check establishes internal consistency for the supported profile, not gateway correctness or measured capacity.
 
 Doctor tests use private filesystem fixtures for link evidence, shared trunks, scope selection and incomplete observations. Keep `lib.rs` and `main.rs` as short entry points; put related behavior in focused, readable modules.
 
-The [offline protocol pilot](docs/protocol-pilot.md) parses borrowed direct-client DHCP requests and encodes broadcast OFFERs into caller-owned buffers, including a single VLAN tag. It is not connected to the daemon and does not own leases or send packets. `just protocol-allocations` optionally uses system Valgrind to compare heap totals for zero versus 100000 packet replays; it requires Python and Valgrind, without new Rust dependencies.
+The [offline protocol pilot](docs/protocol-pilot.md) parses borrowed direct-client DHCP requests and encodes broadcast OFFERs into caller-owned buffers, including a single VLAN tag. The protocol library is not connected to the daemon and does not own leases or send packets; the separate core now owns offline lease state. `just protocol-allocations` optionally uses system Valgrind to compare heap totals for zero versus 100000 packet replays; it requires Python and Valgrind, without new Rust dependencies.
+
+The [offline lease foundation](docs/lease-core.md) adds bounded ownership, generation-safe reuse, renewal, release, decline/quarantine, expiry and ACK/NAK replies. `just lease-demo` runs a complete synthetic exchange with no networking; `just lease-allocations` checks 100000 full lifecycle replays with Valgrind. A lease does not authorize upstream traffic. The pilot supports at most 256 addresses per pool; daemon/config integration and real-client interoperability remain future work.
 
 `just coova-compare` builds selected original C functions from the pinned sibling CoovaChilli revision and compares shared option/OFFER fixtures, independent wire validation, sanitizers, batch timings and allocation totals. It needs system C/Clang tooling and Valgrind; see [comparison scope and findings](docs/coova-comparison.md). It does not run either gateway or change host networking.
 
@@ -80,6 +82,7 @@ Use `just comparison-check` for framework regressions without C tools, or `just 
 - [RADIUS TOML profile](examples/irongate.toml)
 - [Session accounting and throughput diagnostics](docs/accounting-diagnostics.md)
 - [Performance and stability release criteria](docs/performance-stability.md)
+- [Release evidence and initial quality checkpoint](docs/release-evidence.md)
 - [Standalone providers and RADIUS configuration and health](docs/authentication-radius.md)
 - [Deployment sizing and backend capacity](docs/deployment-scaling.md)
 - [Per VLAN portals and network isolation](docs/vlan-networks.md)
@@ -87,6 +90,7 @@ Use `just comparison-check` for framework regressions without C tools, or `just 
 - [Implemented configuration checks](docs/configuration.md)
 - [Read only doctor](docs/doctor.md)
 - [Offline protocol pilot and allocation evidence](docs/protocol-pilot.md)
+- [Bounded lease foundation and offline DHCP demo](docs/lease-core.md)
 - [Offline Coova comparison and findings](docs/coova-comparison.md)
 - [Comparison framework and regression baselines](docs/comparison-framework.md)
 - [Captive portal MVP implementation plan](docs/mvp-plan.md)

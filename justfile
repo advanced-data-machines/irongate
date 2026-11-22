@@ -20,10 +20,27 @@ check:
     cargo clippy --workspace --all-targets -- -D warnings
     cargo test --workspace
 
+# Coverage-backed complexity report; requires cargo-llvm-cov and cargo-crap.
+crap:
+    mkdir -p target/quality
+    cargo llvm-cov --workspace --lcov --output-path target/quality/lcov.info --offline
+    cargo crap --workspace --lcov target/quality/lcov.info --exclude '**/tests/**' --exclude '**/tests.rs' --format json --output target/quality/crap.json
+    cargo crap --workspace --lcov target/quality/lcov.info --exclude '**/tests/**' --exclude '**/tests.rs' --format markdown --output target/quality/crap.md
+    cargo crap --workspace --lcov target/quality/lcov.info --exclude '**/tests/**' --exclude '**/tests.rs' --top 10
+
 # Measure replay heap allocations using system Valgrind (optional).
 protocol-allocations:
     cargo build -p irongate-proto --example protocol_replay --release
     python3 scripts/check-protocol-allocations.py "${CARGO_TARGET_DIR:-target}/release/examples/protocol_replay"
+
+# Demonstrate lease ownership and complete DHCP replies without networking.
+lease-demo:
+    cargo run -p irongate-proto --example lease_demo --offline
+
+# Check steady-state allocations across 100000 complete lease lifecycles.
+lease-allocations:
+    cargo build -p irongate-proto --example lease_replay --release --offline
+    python3 scripts/check-protocol-allocations.py "${CARGO_TARGET_DIR:-target}/release/examples/lease_replay"
 
 # Check comparison contracts without requiring Coova, a C compiler or Valgrind.
 comparison-check:

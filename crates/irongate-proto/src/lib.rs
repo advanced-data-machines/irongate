@@ -1,6 +1,7 @@
 //! Borrowed, bounded direct-client DHCP protocol experiment.
 //!
-//! This is an offline pilot, not a DHCP server. No leases, sockets or policy.
+//! This is an offline pilot, not a DHCP server. Lease ownership lives in the
+//! separate core; this library contains no sockets or access policy.
 //! Input is Ethernet II without FCS; output borrows caller-owned storage.
 
 #![no_std]
