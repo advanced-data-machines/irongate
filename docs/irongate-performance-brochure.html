@@ -1,0 +1,78 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>IronGate network authentication and performance</title>
+  <link rel="stylesheet" href="irongate-performance-brochure.css">
+</head>
+<body>
+<section class="page">
+  <div class="masthead"><div class="brand">IronGate</div><div class="edition">Architecture and performance brief · November 2026</div></div>
+  <h1>Network authentication<br>and access enforcement</h1>
+  <p class="lead">A Rust successor to CoovaChilli, designed to make captive access easier to configure, observe and test. The gateway owns the access decision whether the portal is on the device or in the cloud.</p>
+  <div class="status"><strong>Early development.</strong> Configuration checks, passive diagnostics and an offline DHCP protocol pilot exist. The live gateway, portal, RADIUS client and enforcement path below are planned.</div>
+
+  <h2>How a client gains access — planned flow</h2>
+  <div class="flow">
+    <div class="step"><div class="number">01 / JOIN</div><h3>Identify the network</h3><p>Ingress interface and VLAN select the profile. DHCP assigns an address; a lease alone grants no upstream access.</p></div>
+    <div class="step"><div class="number">02 / RESTRICT</div><h3>Allow only bootstrap traffic</h3><p>Permit the declared DHCP, DNS and portal paths. Other subscriber transit is denied before admission.</p></div>
+    <div class="step"><div class="number">03 / PRESENT</div><h3>Open the selected portal</h3><p>Serve a local page or use a separate LAN/cloud frontend. External tenant, site and gateway scope stays explicit.</p></div>
+    <div class="step"><div class="number">04 / DECIDE</div><h3>Use the configured provider</h3><p>Local consent grants the configured policy without identity proof. RADIUS can validate credentials and return supported policy attributes.</p></div>
+    <div class="step"><div class="number">05 / ENFORCE</div><h3>Commit the access change</h3><p>Bind the decision to a live session generation, reserve accounting capacity and apply policy before confirming access.</p></div>
+    <div class="step"><div class="number">06 / ACCOUNT AND REVOKE</div><h3>Keep the result observable</h3><p>Track traffic and accounting health. Logout or expiry removes access without waiting for a remote accounting response.</p></div>
+  </div>
+  <p class="caption">A valid cloud callback or RADIUS response is a control event, not a substitute for verified packet enforcement. Browser credentials require HTTPS; arbitrary HTTPS sites are not intercepted.</p>
+
+  <h2>Did CoovaChilli use iptables?</h2>
+  <p><strong>Yes, alongside substantial C userspace logic.</strong> In the classic path, subscriber state checks and DNAT decisions run in <code>dhcp.c</code>; callbacks in <code>chilli.c</code> perform accounting and optional rate checks. Traffic then passes through TUN/TAP to Linux routing and firewall processing. Setup scripts install iptables rules. Optional kernel/netfilter paths also exist.</p>
+
+  <table>
+    <thead><tr><th>Responsibility</th><th>Proposed IronGate placement</th></tr></thead>
+    <tbody>
+      <tr><td>Client access decisions</td><td>Portable Rust session and policy code, with explicit counters, expiry and revocation.</td></tr>
+      <tr><td>Linux safety boundary</td><td>A small persistent deny guard, likely nftables, to block alternate kernel/bridge/IPv6 bypass paths.</td></tr>
+      <tr><td>Device and OS integration</td><td>Thin packet I/O, clock, socket and host-network adapters. Exact forwarding backend must pass the VM experiment.</td></tr>
+    </tbody>
+  </table>
+  <div class="callout"><p><strong>Performance must be demonstrated:</strong> Rust owns subscriber policy; Linux supplies necessary platform services and a fail-closed boundary. Compare matched workloads and verify the complete client path on a declared deployment profile.</p></div>
+  <div class="footer"><div class="sources">Coova source baseline 61854f9: src/dhcp.c:4308, src/chilli.c:5629, src/tun.c:21 and conf/up.sh.in. <a href="https://wiki.nftables.org/wiki-nftables/index.php/What_is_nftables%3F">Netfilter nftables guidance</a>; its exact IronGate use remains a design choice.</div><div>1 / 2</div></div>
+</section>
+
+<section class="page">
+  <div class="masthead"><div class="brand">IronGate</div><div class="edition">The packet path and the evidence</div></div>
+  <h1>The code that matters<br>on every packet</h1>
+  <p class="lead">The performance-critical path is validation, network/session lookup, policy evaluation and forwarding or drop. Login pages and backend requests belong outside that repeated work.</p>
+
+  <div class="path"><div class="node">Borrow and validate</div><span class="arrow">→</span><div class="node">Bind network/client</div><span class="arrow">→</span><div class="node">Evaluate policy</div><span class="arrow">→</span><div class="node">Forward or drop</div></div>
+  <p class="caption"><strong>Proposed Rust-like pseudocode.</strong> This illustrates the future enforcement boundary; these functions are not shipping runtime code.</p>
+  <pre><code>let packet = validate_borrowed(frame)?;
+let network = classify_ingress(interface, packet.vlan())?;
+if bootstrap.permits(network, &amp;packet) {
+    return handle_bootstrap(network, packet);
+}
+let session = sessions.match_bound_client(network, &amp;packet)?;
+let decision = policy.evaluate(session, &amp;packet, now)?;
+forward_or_drop(decision, packet)</code></pre>
+  <div class="columns">
+    <div><h2>Bound the fast path</h2><p>Borrow input bytes; reuse startup-owned packet and session slots. Bound lookups, queues and work per dispatch. Validate before field access and use generations to reject stale results after slot reuse.</p><p>Keep blocking I/O, disk writes, formatted logs and per-packet heap growth out of the packet owner. Return traffic must resolve to the same network/session policy.</p></div>
+    <div><h2>Keep control work separate</h2><p>Portal actions and RADIUS exchanges update session decisions asynchronously. Ordinary data packets do not ask the RADIUS server for permission.</p><p>Bounded workers handle journal/accounting delivery. Reserve progress for expiry, revocation and diagnostics even under forwarding load; a slow backend must not stall every subscriber.</p></div>
+  </div>
+
+  <h2>What is implemented and measured today?</h2>
+  <p>The current <code>irongate-proto::parse_request</code> composes borrowed Ethernet/VLAN, IPv4/UDP and DHCP validation. It verifies lengths and available checksums; the OFFER encoder writes into caller-owned storage. The crate is <code>no_std</code>, imports no allocator and has no dependencies.</p>
+  <table class="evidence">
+    <thead><tr><th>Evidence</th><th>Result and boundary</th></tr></thead>
+    <tbody>
+      <tr><td>Rust parser + OFFER replay</td><td>100,000 tagged DISCOVER/OFFER replays: zero additional measured heap allocations after identical setup/warmup.</td></tr>
+      <tr><td>Original C versus Rust</td><td>18 option cases and 4 OFFER cases checked; independent wire validation and C ASan/UBSan passed. Both encoders showed no additional heap allocation in replay.</td></tr>
+      <tr><td>Relative speed and capacity</td><td>No overall winner established. Current output/instrumentation differs; gateway throughput, tail latency and session capacity are not yet measured.</td></tr>
+    </tbody>
+  </table>
+  <p class="note">Counters distinguish received, permitted, submitted-for-transmit and dropped traffic. Accounting acknowledgements and delivered client traffic require separate evidence.</p>
+
+  <h2>Validate the full client journey</h2>
+  <p>In an isolated VM: prove blocked traffic before login, usable bidirectional access after login, and blocked existing/new flows after logout or expiry. Repeat for local and external portals, RADIUS outages and two VLANs. Measure packet rate, p99 latency, allocation/churn stability, accounting lag and diagnostic overhead on a declared profile.</p>
+  <div class="footer"><div class="sources">Code: crates/irongate-proto/src/request.rs and src/dhcp/offer.rs. Evidence: docs/protocol-pilot.md and docs/coova-comparison.md. Delivery plan: docs/mvp-plan.md. No production capacity or automatic Rust speed advantage is claimed.</div><div>2 / 2</div></div>
+</section>
+</body>
+</html>

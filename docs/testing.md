@@ -16,11 +16,17 @@ These tests compile code, read fixture files, invoke the CLI and create/remove t
 
 An explicit `just ig doctor --host --json` reads real interface metadata from sysfs without loading TOML, privilege escalation or mutation. `just ig doctor --config PATH --json` additionally checks configured requirements. Use a configuration matching the desired inspection scope, and do not interpret a pass as gateway readiness. See [doctor](doctor.md) for limits. Host smoke checks are separate from fixture tests. Inventory fixtures cover inactive links with stale speed, unknown driver sentinels, missing/malformed speed and duplex, device classification, sorted bounded enumeration and independent inventory/preflight results.
 
-The test suite verifies static profiles and CLI behavior, not gateway throughput or accounting delivery. A passing config report always leaves runtime readiness unverified. `irongated` still prints a scaffold notice and exits.
+The test suite verifies static profiles, CLI behavior and the [offline protocol pilot](protocol-pilot.md), not gateway throughput or accounting delivery. Protocol tests use synthetic hex fixtures and caller-owned buffers; they send no packets. The optional `just protocol-allocations` recipe compares Valgrind allocation totals for release-mode packet replay and requires system Python/Valgrind. A passing config report always leaves runtime readiness unverified. `irongated` still prints a scaffold notice and exits.
+
+The optional `just coova-compare` additionally runs 16 standard-library Python framework/oracle tests, builds original pinned Coova C functions, and compares 18 option and four OFFER cases in two versioned suites. It uses separate optimized, ASan/UBSan and Valgrind runs; no gateway or network I/O is started. `just comparison-check` runs only the framework tests, and `--checks-only`/`--suite NAME` limit actual comparisons. See [scope and findings](coova-comparison.md) and [framework/baseline contracts](comparison-framework.md). These checks are separate from `just check`, so ordinary Rust tests do not require a sibling C checkout or system sanitizer/profiler tools.
 
 ## Proposed packet lab inside a VM
 
 Use a disposable guest with a snapshot and a dedicated virtual disk. Keep the lab disconnected from physical LAN bridges and passthrough NICs. Ordinary hypervisor NAT can provide optional build-time package access; the forwarding test topology remains entirely inside the guest. Installing or configuring a VM is a separate future action, not part of this milestone.
+
+The [MVP plan](mvp-plan.md) now defines the live gates: local consent and enforced forwarding, then HTTPS/RADIUS authentication/accounting, then two-VLAN qualification. Manual portal URL discovery and a controlled routed upstream are sufficient for the first walkthrough; wider client discovery and public Internet/NAT support are separate increments.
+
+The [concrete VM proposal](vm-demo.md) uses one QEMU/KVM Debian guest, with no demo NIC and all veth/VLAN/client/service topology inside it. A separate HTTPS namespace emulates a multitenant external portal for callback, isolation and outage tests. [Portal hosting validation](portal-hosting.md) already distinguishes placement and checks tenant metadata; no VM or portal runtime is provisioned by those offline tests.
 
 ```mermaid
 flowchart LR

@@ -5,12 +5,14 @@
 //! is performed. Passing these checks does not establish runtime readiness.
 
 mod input;
+mod portal;
 mod report;
 mod requirements;
 mod schema;
 mod validate;
 
 pub use input::{check_file, check_str};
+pub use portal::PortalProfile;
 pub(crate) use report::locate_last;
 pub use report::{Finding, Report, Severity, Summary};
 pub use requirements::{HostRequirements, NetworkRequirement};

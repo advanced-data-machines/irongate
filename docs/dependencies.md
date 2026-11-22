@@ -1,8 +1,12 @@
 # IronGate dependency choices
 
-Use established crates when they remove meaningful correctness risk, with a small explicit feature set and a clear boundary. Avoid adding a framework or subsystem for hypothetical future use. The current operator/configuration milestone has four direct third-party dependencies; the packet/session core and protocol scaffolds remain dependency-free.
+Use established crates when they remove meaningful correctness risk, with a small explicit feature set and a clear boundary. Avoid adding a framework or subsystem for hypothetical future use. The current operator/configuration milestone has four direct third-party dependencies; the session core scaffold and offline protocol pilot remain dependency-free.
 
 The initial doctor backend uses standard-library sysfs reads and adds no dependencies. Keep entry points short and organize related parsing, rules, I/O and rendering into focused modules; introduce shared abstractions only when another real caller needs them.
+
+The [protocol pilot](protocol-pilot.md) records an initial documentation review of `etherparse`, `edge-dhcp` and `dhcproto`. It is a small bounded experiment, not a decision to build a general network stack. Compare candidates against the pilot corpus before expanding protocol coverage. Optional allocation instrumentation uses system Valgrind and standard-library Python, with no Rust allocator wrapper or additional crate.
+
+The optional [Coova comparison harness](coova-comparison.md) also requires system C/Clang tooling and a sibling Git checkout containing the pinned upstream source. It generates temporary C derivatives under `target`, preserves upstream notices, and adds no C linkage or dependency to the production Rust crates. Python orchestration uses only the standard library.
 
 | Crate | Purpose | Enabled scope |
 | --- | --- | --- |

@@ -6,6 +6,8 @@ Support a distinct captive portal and access policy per VLAN on the same subscri
 
 Each entry in `[[networks]]` has a unique name, subscriber interface, explicit tagging mode, optional VLAN ID, subnet, DHCP/DNS settings, portal contract, authentication provider, accounting destination, limits and session capacity. Named RADIUS pools can be shared without duplicating endpoint/secret definitions; each network explicitly references the pool it uses. A local provider is also valid for a VLAN profile.
 
+Each portal explicitly selects [local or external hosting](portal-hosting.md). Local and external/cloud frontends may coexist on different VLANs; the provider remains a separate choice. External multitenant profiles additionally declare tenant/site/gateway IDs. Tenant labels or a shared portal hostname must not select or widen a subscriber's network identity. Static validation accepts mixed local/external profiles; live runtime support is still unimplemented.
+
 The [VLAN example](../examples/vlan-portals.toml) gives guest VLAN 10 and staff VLAN 20 different external portals and explicit RADIUS/accounting selections. The [single-network](../examples/irongate.toml) and [standalone](../examples/standalone.toml) examples use the same schema with an untagged profile. All three pass the implemented static configuration checks; runtime VLAN/portal behavior remains unimplemented.
 
 ```mermaid

@@ -33,6 +33,7 @@ lease_seconds = 600
 upstream_servers = ["192.0.2.53"] # Documentation address; replace before use.
 
 [networks.portal]
+hosting = "external" # Separate portal service, on a LAN or in the cloud.
 mode = "external_uam"
 url = "https://portal.example.test/login"
 secret_file = "/etc/irongate/secrets/portal"

@@ -33,6 +33,7 @@ lease_seconds = 600
 upstream_servers = ["192.0.2.53"] # Documentation address; replace before use.
 
 [networks.portal]
+hosting = "local" # Page is served on the gateway device.
 mode = "builtin_consent"
 listen = "192.168.50.1:3990"
 terms_file = "/etc/irongate/terms.html"

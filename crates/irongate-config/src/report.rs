@@ -78,6 +78,8 @@ pub struct Report {
     pub summary: Option<Summary>,
     /// Available only for a valid configuration; not serialized in config reports.
     pub host_requirements: Option<HostRequirements>,
+    /// Redacted portal placement for each network, only after validation passes.
+    pub portal_profiles: Vec<crate::PortalProfile>,
 }
 
 impl Report {
@@ -94,6 +96,7 @@ impl Report {
             findings_truncated: false,
             summary: None,
             host_requirements: None,
+            portal_profiles: Vec::new(),
         }
     }
 

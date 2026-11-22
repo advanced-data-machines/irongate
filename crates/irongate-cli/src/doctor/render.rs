@@ -60,6 +60,10 @@ pub(crate) fn text(report: &DoctorReport) -> String {
     if let Some(network) = &report.network {
         let _ = writeln!(output, "Network: {}", network.escape_debug());
     }
+    output.push_str(&crate::output::portal_text(
+        &report.config,
+        report.network.as_deref(),
+    ));
     if let Some(inventory) = &report.host_network {
         output.push_str(&super::inventory::text(inventory));
     }

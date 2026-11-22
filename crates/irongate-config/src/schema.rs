@@ -52,7 +52,11 @@ const DHCP: &[Field] = &[
 ];
 const DNS: &[Field] = &[field!("upstream_servers", Texts)];
 const PORTAL: &[Field] = &[
+    field!("hosting", Text, optional),
     field!("mode", Text),
+    field!("tenant_id", Text, optional),
+    field!("site_id", Text, optional),
+    field!("gateway_id", Text, optional),
     field!("url", Text, optional),
     field!("secret_file", Text, optional),
     field!("listen", Text, optional),

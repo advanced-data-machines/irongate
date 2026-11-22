@@ -1,6 +1,6 @@
 # IronGate memory policy
 
-The target is no general-purpose heap allocation during steady-state packet processing or session creation and removal. Allocate large pools once at startup, then reuse their slots. Startup allocation is allowed; unbounded growth is not. These are requirements to implement and measure, not properties established by the empty scaffold.
+The target is no general-purpose heap allocation during steady-state packet processing or session creation and removal. Allocate large pools once at startup, then reuse their slots. Startup allocation is allowed; unbounded growth is not. The [offline protocol pilot](protocol-pilot.md) has measured zero additional heap allocations for a bounded DISCOVER/OFFER replay; session storage and the live packet path remain requirements to implement and measure.
 
 ## Resource storage
 

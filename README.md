@@ -4,6 +4,10 @@ A Rust network access gateway project starting from CoovaChilli's behavior and d
 
 IronGate currently provides offline TOML validation through `ig config check` and read-only Linux interface preflight through `ig doctor`. It does not serve DHCP, authenticate clients, forward traffic, or configure the host network. Broader NIC tools and apply commands remain planned.
 
+The [MVP plan](docs/mvp-plan.md) works backward from a real captive portal demo: local consent first, then HTTPS login with external RADIUS authentication/accounting, followed by two per-VLAN portal profiles. Live testing will stay in a disposable VM. The [roadmap](docs/roadmap.md) distinguishes that lab MVP from production qualification.
+
+Portal configuration explicitly distinguishes [local on-device and external/cloud hosting](docs/portal-hosting.md), including tenant-scoped metadata and per-VLAN placement. See [the cloud example](examples/cloud-portal.toml) and [the proposed isolated VM](docs/vm-demo.md). These are validated configuration contracts; portal services remain unimplemented.
+
 ## Try the CLI
 
 ```sh
@@ -38,7 +42,7 @@ just ig config check --config examples/standalone.toml --json
 | Crate | Responsibility | Current state |
 | --- | --- | --- |
 | `irongate-core` | Session ownership, policy, accounting, quotas, and timers | Empty `no_std` library; no dependencies or allocator imported |
-| `irongate-proto` | Borrowed protocol parsing and bounded encoding | Empty `no_std` library; no dependencies or allocator imported |
+| `irongate-proto` | Borrowed protocol parsing and bounded encoding | Offline Ethernet/IPv4/UDP/DHCP request and OFFER pilot; `no_std`, no dependencies or allocator imported |
 | `irongate-config` | Schema, cross-field checks and minimal host requirements | Bounded input and findings; borrowed TOML views where supported |
 | `irongate-cli` | Operator command `ig` | `config check`, passive `doctor`, text/JSON results, help and version |
 | `irongated` | Host process, configuration, adapters, and event loop | Prints scaffold status and exits |
@@ -58,6 +62,12 @@ Tests cover the example profiles, conflicting VLANs/subnets, provider references
 
 Doctor tests use private filesystem fixtures for link evidence, shared trunks, scope selection and incomplete observations. Keep `lib.rs` and `main.rs` as short entry points; put related behavior in focused, readable modules.
 
+The [offline protocol pilot](docs/protocol-pilot.md) parses borrowed direct-client DHCP requests and encodes broadcast OFFERs into caller-owned buffers, including a single VLAN tag. It is not connected to the daemon and does not own leases or send packets. `just protocol-allocations` optionally uses system Valgrind to compare heap totals for zero versus 100000 packet replays; it requires Python and Valgrind, without new Rust dependencies.
+
+`just coova-compare` builds selected original C functions from the pinned sibling CoovaChilli revision and compares shared option/OFFER fixtures, independent wire validation, sanitizers, batch timings and allocation totals. It needs system C/Clang tooling and Valgrind; see [comparison scope and findings](docs/coova-comparison.md). It does not run either gateway or change host networking.
+
+Use `just comparison-check` for framework regressions without C tools, or `just coova-compare --checks-only --suite dhcp-options` for a selected correctness/sanitizer suite. The [reusable framework](docs/comparison-framework.md) documents extension contracts, saved baselines and explicitly matched versus unmatched performance evidence.
+
 ## Design and progress
 
 - [Architecture and migration choices](docs/architecture.md)
@@ -76,6 +86,14 @@ Doctor tests use private filesystem fixtures for link evidence, shared trunks, s
 - [Standalone TOML profile](examples/standalone.toml) and [VLAN portal profile](examples/vlan-portals.toml)
 - [Implemented configuration checks](docs/configuration.md)
 - [Read only doctor](docs/doctor.md)
+- [Offline protocol pilot and allocation evidence](docs/protocol-pilot.md)
+- [Offline Coova comparison and findings](docs/coova-comparison.md)
+- [Comparison framework and regression baselines](docs/comparison-framework.md)
+- [Captive portal MVP implementation plan](docs/mvp-plan.md)
+- [Local/external portal hosting and tenant scope](docs/portal-hosting.md)
+- [Proposed QEMU/KVM demonstration](docs/vm-demo.md)
+- [QEMU lesson one and first boot commands](docs/qemu-first-boot.md)
+- [Two-page authentication and performance brochure](docs/irongate-performance-brochure.pdf) and [editable print source](docs/irongate-performance-brochure.html)
 - [Dependency choices and binary data direction](docs/dependencies.md)
 - [Development PC and isolated VM testing](docs/testing.md)
 

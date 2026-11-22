@@ -10,6 +10,8 @@ Keep essential behavior in the normal build rather than requiring operators to d
 
 Offer separate quickstarts for [standalone and centralized authentication](authentication-radius.md). Make RADIUS optional and show it as disabled when not selected. [VLAN network profiles](vlan-networks.md) each declare their own portal, provider, accounting destination and limits. Diagnose the selected network rather than treating all clients as one global configuration. Document [capacity calculations and scale profiles](deployment-scaling.md) alongside configuration examples.
 
+Show [portal hosting](portal-hosting.md) explicitly: local on the gateway, or external on a LAN/cloud service, with tenant scope when selected. Portal placement, callback validity, provider authentication and accounting health are separate evidence. Cloud failure must not silently activate a local portal with a weaker admission policy. The [VM proposal](vm-demo.md) tests both placements without exposing the development host's LAN.
+
 Support managed mode, where IronGate creates a bounded set of named host resources, and preconfigured mode, where the administrator owns them and IronGate validates prerequisites. Do not silently choose between those modes. Separate management connectivity from subscriber interfaces, and identify conflicts with NetworkManager, systemd-networkd, bridges, VLANs and other services.
 
 | Proposed command | Operator outcome |

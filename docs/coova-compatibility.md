@@ -2,6 +2,8 @@
 
 Source baseline: sibling repository `../coova-chilli`, commit `61854f9`. This map supports selective behavior porting. It does not imply full compatibility or that the listed behavior has been implemented in IronGate.
 
+The first [offline comparison](coova-comparison.md) now exercises original option lookup, OFFER assembly and checksum functions against the Rust pilot with shared synthetic inputs. Its extracted fixture profile is narrower than a full daemon build; differences and missing Rust functionality are documented explicitly.
+
 ## Source map
 
 | Behavior | Source and entry points | Rust design concern |
@@ -18,6 +20,8 @@ Source baseline: sibling repository `../coova-chilli`, commit `61854f9`. This ma
 | Config and saved state | `src/options.c`, `src/cmdline.ggo`, `src/statusfile.c` | Reject unsupported settings; version new formats; define restart semantics |
 
 ## Proposed first release profile
+
+The [controlled-lab MVP](mvp-plan.md) is narrower than this production replacement profile: local consent, then one-backend RADIUS authentication/accounting, two VLAN portals, bounded behavior and diagnostics. External UAM, CoA/disconnect, shaping, public NAT and broader interoperability are explicit follow-ups, not claims of the first demo.
 
 Linux IPv4 with Ethernet/ARP, one upstream path, and explicit untagged or single-tag VLAN subscriber profiles with distinct portals and policies. Support local DHCP or an explicitly selected integration, standalone consent/local records and centralized RADIUS/UAM profiles, required RADIUS methods, accounting, CoA/disconnect, DNS/garden rules, expiry, quotas and bandwidth limits.
 

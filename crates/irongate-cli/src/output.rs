@@ -20,6 +20,10 @@ pub(crate) fn config_json(report: &Report) -> Value {
         "config_path": report.config_path, "exit_code": report.exit_code,
         "findings": findings, "findings_truncated": report.findings_truncated,
     });
+    result["portal_profiles"] = json!(report.portal_profiles.iter().map(|portal| json!({
+        "network": portal.network, "hosting": portal.hosting, "hosting_explicit": portal.hosting_explicit,
+        "mode": portal.mode, "tenant_scoped": portal.tenant_scoped,
+    })).collect::<Vec<_>>());
     if let Some(summary) = &report.summary {
         result["summary"] = json!({
             "networks": summary.networks, "max_sessions": summary.max_sessions,
@@ -60,6 +64,7 @@ pub(crate) fn config_text(report: &Report) -> String {
     if report.findings_truncated {
         output.push_str("More findings were omitted; fix these and check again.\n");
     }
+    output.push_str(&portal_text(report, None));
     if let Some(summary) = &report.summary {
         let _ = writeln!(
             output,
@@ -75,6 +80,33 @@ pub(crate) fn config_text(report: &Report) -> String {
     output.push_str(
         "Static checks only. Host, secret files, services, and gateway behavior are unverified.\n",
     );
+    output
+}
+
+pub(crate) fn portal_text(report: &Report, network: Option<&str>) -> String {
+    use std::fmt::Write as _;
+    let mut output = String::new();
+    for portal in &report.portal_profiles {
+        if network.is_some_and(|name| name != portal.network) {
+            continue;
+        }
+        let location = if portal.hosting == "local" {
+            "local (on this device)"
+        } else {
+            "external (separate LAN/cloud service)"
+        };
+        let _ = writeln!(
+            output,
+            "Portal {}: {location}; mode {}{}.",
+            portal.network.escape_debug(),
+            portal.mode,
+            if portal.tenant_scoped {
+                "; tenant/site/gateway scoped"
+            } else {
+                ""
+            }
+        );
+    }
     output
 }
 

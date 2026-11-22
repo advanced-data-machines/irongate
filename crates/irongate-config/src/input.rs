@@ -36,6 +36,7 @@ pub fn check_str(input: &str, label: &str) -> Report {
         validate::check(table.get_ref(), &mut report);
         if report.exit_code == 0 {
             report.host_requirements = Some(crate::requirements::extract(table.get_ref()));
+            report.portal_profiles = crate::portal::profiles(table.get_ref());
         }
     }
     report

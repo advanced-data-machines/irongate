@@ -1,12 +1,13 @@
 //! Cross-field validation after strict schema/type checks.
 
 use std::collections::BTreeSet;
-use std::net::{IpAddr, Ipv4Addr, SocketAddrV4};
+use std::net::{IpAddr, Ipv4Addr};
 use std::path::Path;
 
 use ipnet::Ipv4Net;
 use toml::de::DeTable;
 
+use crate::portal::check as portal;
 use crate::schema::{child, join, number, optional_number, optional_text, tables, text};
 use crate::{Report, Summary};
 
@@ -400,76 +401,6 @@ fn host(net: Ipv4Net, ip: Ipv4Addr) -> bool {
     net.contains(&ip) && ip != net.network() && ip != net.broadcast()
 }
 
-fn portal(config: &DeTable<'_>, path: &str, gateway: Option<Ipv4Addr>, report: &mut Report) {
-    match text(config, "mode") {
-        "external_uam" => {
-            file_path(
-                report,
-                &join(path, "secret_file"),
-                optional_text(config, "secret_file"),
-            );
-            let url = optional_text(config, "url");
-            let uri = url.and_then(|value| value.parse::<http::Uri>().ok());
-            let valid = uri.as_ref().is_some_and(|uri| {
-                matches!(uri.scheme_str(), Some("http" | "https"))
-                    && uri.authority().is_some_and(valid_authority)
-            }) && url.is_some_and(|value| !value.contains('#'));
-            if !valid {
-                report.error("portal.url.invalid", &join(path, "url"), "Expected an absolute HTTP(S) portal URI without credentials or fragments.",
-                    "Set a portal URL with a host and a valid optional port; keep secrets in secret_file.");
-            } else if uri.as_ref().and_then(|uri| uri.scheme_str()) == Some("http") {
-                report.warning(
-                    "portal.url.unencrypted",
-                    &join(path, "url"),
-                    "External portal uses unencrypted HTTP.",
-                    "Use HTTPS for a deployed authentication portal.",
-                );
-            }
-            for key in ["listen", "terms_file"] {
-                unused(config, key, path, report);
-            }
-        }
-        "builtin_consent" => {
-            let listen =
-                optional_text(config, "listen").and_then(|s| s.parse::<SocketAddrV4>().ok());
-            if !listen
-                .is_some_and(|addr| addr.port() != 0 && gateway.is_some_and(|ip| *addr.ip() == ip))
-            {
-                report.error("portal.listen.invalid", &join(path, "listen"), "Built-in portal must bind the subscriber gateway IPv4 address and a nonzero port.",
-                    "Use this network's gateway:port; wildcard and management bindings are not accepted.");
-            }
-            file_path(
-                report,
-                &join(path, "terms_file"),
-                optional_text(config, "terms_file"),
-            );
-            for key in ["url", "secret_file"] {
-                unused(config, key, path, report);
-            }
-        }
-        mode => choice(
-            report,
-            &join(path, "mode"),
-            mode,
-            &["external_uam", "builtin_consent"],
-        ),
-    }
-}
-
-fn valid_authority(authority: &http::uri::Authority) -> bool {
-    if authority.host().is_empty() || authority.as_str().contains('@') {
-        return false;
-    }
-    match authority.port() {
-        Some(port) => port.as_str().parse::<u16>().is_ok_and(|n| n > 0),
-        // http::Authority permits ports that cannot be represented as u16 and
-        // returns None for them. Distinguish that from an absent port, including
-        // the colons inside a bracketed IPv6 host.
-        None if authority.as_str().starts_with('[') => authority.as_str().ends_with(']'),
-        None => !authority.as_str().contains(':'),
-    }
-}
-
 fn accounting_config(config: &DeTable<'_>, path: &str, report: &mut Report) {
     match text(config, "sink") {
         "radius" => {
@@ -648,7 +579,7 @@ fn capacities(
     }
 }
 
-fn name(report: &mut Report, field: &str, value: &str) {
+pub(crate) fn name(report: &mut Report, field: &str, value: &str) {
     if value.is_empty()
         || value.len() > 64
         || !value
@@ -681,7 +612,7 @@ fn interface(report: &mut Report, field: &str, value: &str) {
     }
 }
 
-fn file_path(report: &mut Report, field: &str, value: Option<&str>) {
+pub(crate) fn file_path(report: &mut Report, field: &str, value: Option<&str>) {
     if !value.is_some_and(|s| {
         Path::new(s).is_absolute() && s.len() > 1 && !s.chars().any(char::is_control)
     }) {
@@ -690,7 +621,7 @@ fn file_path(report: &mut Report, field: &str, value: Option<&str>) {
     }
 }
 
-fn choice(report: &mut Report, field: &str, value: &str, supported: &[&str]) {
+pub(crate) fn choice(report: &mut Report, field: &str, value: &str, supported: &[&str]) {
     if !supported.contains(&value) {
         report.error(
             "config.value.unsupported",
@@ -720,7 +651,7 @@ fn required_choice(
     }
 }
 
-fn unused(config: &DeTable<'_>, key: &str, path: &str, report: &mut Report) {
+pub(crate) fn unused(config: &DeTable<'_>, key: &str, path: &str, report: &mut Report) {
     if config.contains_key(key) {
         report.error(
             "config.value.inapplicable",

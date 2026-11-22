@@ -1,6 +1,8 @@
 # IronGate roadmap
 
-The workspace provides offline `ig config check` and an initial read-only `ig doctor` with scoped interface evidence, text/JSON reports and regression tests. Broader host preflight, packet handling and runtime gateway behavior remain unimplemented. Checklist completion requires implementation evidence and the acceptance criteria below.
+The workspace provides offline `ig config check`, an initial read-only `ig doctor`, and an offline borrowed DHCP request/OFFER protocol pilot. Broader host preflight, live packet handling and runtime gateway behavior remain unimplemented. Checklist completion requires implementation evidence and the acceptance criteria below.
+
+The immediate product goal is a working captive portal demonstration, followed by RADIUS-backed login and accounting through the same session engine. Both flows, plus two distinct VLAN profiles, are required for the lab MVP. The [backward-planned MVP implementation plan](mvp-plan.md) defines scope, dependencies, acceptance gates, branches and effort assumptions. It takes priority over expanding isolated parser features or microbenchmarks.
 
 ## Current progress
 
@@ -27,9 +29,30 @@ The workspace provides offline `ig config check` and an initial read-only `ig do
 - [ ] Set numerical packet-rate, latency, memory, revocation and accounting-lag targets for the first deployment profile.
 - [ ] Validate the preferred userspace forwarding design in a bounded experiment.
 - [ ] Deliver configuration validation, host preflight and read-only NIC inspection before live access enforcement.
-- [ ] Complete the first allocation-measured protocol implementation.
+- [x] Complete a bounded offline DHCP request/OFFER pilot with synthetic wire comparisons and measured replay allocation totals.
+- [x] Compare pinned original C option/OFFER/checksum functions offline, with independent wire checks, sanitizers and separate timing/allocation evidence.
+- [x] Establish reusable comparison suites, saved same-implementation baselines, explicit match status and regression/failure-report contracts.
+- [ ] Qualify the pilot with differential decoding, coverage-guided fuzzing and isolated VM interoperability.
 
-## Milestones
+## MVP delivery order
+
+| Increment | Result required before advancing |
+| --- | --- |
+| M0 Demo contract | Freeze lab profile, test topology, supported inputs and numerical acceptance goals |
+| M1 Lease/session foundation | Bounded address ownership, DHCP lifecycle, generation-safe sessions and explicit effects |
+| M2 Linux packet lab | Real client DHCP/ARP and bidirectional userspace transit with unauthorized-drop, revocation and crash guards |
+| M3 Local consent portal | Client can accept terms, gain access, log out, and see matching records/diagnostics without RADIUS |
+| M4 RADIUS portal/provider | HTTPS login, accept/reject/failure behavior, supported attributes, Start/Interim/Stop and separate auth/accounting health |
+| M4b External portal contract | Explicit local/cloud placement, scoped handoff/callback, exact garden and separate multitenant HTTPS fixture |
+| M5 MVP qualification | Two different per-VLAN portals, independent sessions, repeatable setup/teardown and load/failure evidence |
+
+Keep all live work inside a disposable VM. The first demo can use an explicit portal URL and a routed controlled upstream; automatic popup interoperability and public Internet/NAT support follow. See [the detailed plan](mvp-plan.md) for exact inclusions and deferrals. The comparison framework supports each implemented path rather than becoming a prerequisite for broad Coova feature parity.
+
+The [VM proposal](vm-demo.md) keeps all links, clients, RADIUS and an external/cloud portal stand-in inside one QEMU guest. The [hosting contract](portal-hosting.md) preserves local and external deployment choices, including different placement per VLAN, without treating tenant metadata as authority.
+
+## Broader production qualification
+
+These milestones retain the longer-term replacement scope. They are not all prerequisites for the first portal demonstration.
 
 | Milestone | Deliverables | Evidence required to advance |
 | --- | --- | --- |
@@ -45,18 +68,21 @@ The workspace provides offline `ig config check` and an initial read-only `ig do
 
 The first doctor/preflight slice is complete; [its scope](doctor.md) excludes routes, host guards, service conflicts, device capabilities and actual backend health. Future increments can add that evidence while keeping unavailable observations distinct from successful checks. Packet lab provisioning belongs in a disposable VM, not on the development PC. See [testing boundaries](testing.md). Complete the deployment inventory and target selection alongside these increments.
 
-### Recommended next checkpoint
+### Protocol pilot checkpoint
 
-Keep the completed operator slice on `feature/doctor` for review. After integration into `release/0.1.x`, the recommended next branch is `feature/protocol-pilot`: a small offline Ethernet/IPv4/UDP/DHCP parsing and reply-encoding experiment in `irongate-proto`. Start with a documented packet corpus and explicit supported/rejected forms, borrowed packet views, caller-owned output buffers, and malformed-input/capacity tests. Demonstrate allocation-free parsing and encoding before adding a lease service or live sockets. This tests the project's performance and memory assumptions early while keeping all development safe on this PC. Live interoperability follows in the disposable VM.
+The operator slice and Rust 1.100 baseline are integrated into `release/0.1.x`. `feature/protocol-pilot` now implements the [offline Ethernet/IPv4/UDP/DHCP experiment](protocol-pilot.md): borrowed request views, caller-owned broadcast OFFER output, explicit work limits, synthetic wire fixtures and truncation/malformed/capacity tests. Initial Valgrind replay shows zero additional heap allocation across 100000 tagged request/OFFER operations. The [Coova comparison](coova-comparison.md) adds differential option/OFFER cases and independent checksum/structure checks; this C path also shows zero additional replay allocations. The [comparison framework](comparison-framework.md) preserves this evidence as versioned suites. These workloads do not establish leases, a complete DHCP server or live gateway performance. Finish this checkpoint, then work through the demo contract and MVP sequence above.
 
 Clearer speed labels, Wi-Fi rate reporting and broader host preflight remain follow-ups; they do not block the protocol experiment. Record the first deployment's behavior and numerical targets alongside the pilot so its eventual benchmarks have useful acceptance criteria.
 
-1. Select one representative deployment and record its required behavior in `coova-compatibility.md`.
-2. Establish an isolated subscriber/gateway/upstream topology with a portal and RADIUS test server.
-3. Evaluate `edge-dhcp` for bounded DHCP behavior; compare `dhcproto` and Dora as protocol and interoperability references. Do not add a dependency until allocation behavior, features, target support and license fit have been reviewed.
-4. Implement borrowed validation of one complete input path, bounded reply encoding and explicit capacity errors. Test actual malformed input and full-capacity behavior.
-5. Add allocator instrumentation and measure the pilot before growing the service surface.
-6. Validate userspace forwarding for revocation, counters, bounded shaping and portal compatibility. Measure the platform boundary and record any justified kernel backend dependency in `architecture.md`.
+1. Freeze the MVP acceptance contract and disposable-lab ownership, including a representative deployment profile.
+2. Implement bounded lease/session ownership and required DHCP lifecycle; extend comparison/fuzz cases for those actual paths.
+3. Prove userspace forwarding, native local portal reachability, return traffic and failure guards in the isolated topology.
+4. Deliver the local consent portal and record/diagnostic walkthrough.
+5. Add HTTPS login and RADIUS authentication/accounting without changing session/policy ownership.
+6. Prove the external portal handoff with explicit tenant/device scope using the isolated HTTPS fixture.
+7. Qualify mixed local/external VLAN profiles and the load/failure cases before broadening the service surface.
+
+Review `edge-dhcp`, `etherparse`, `dhcproto` and other proven components when they remove a concrete implementation risk; retain the dependency/memory review before adoption. Packet-library comparison and fuzzing belong alongside affected protocol work, rather than an indefinite research phase before the portal.
 
 Reference projects: [edge-dhcp](https://docs.rs/edge-dhcp/latest/edge_dhcp/), [dhcproto](https://github.com/bluecatengineering/dhcproto), [Dora](https://github.com/bluecatengineering/dora), and [uspot](https://github.com/f00b4r0/uspot). These are components or architecture references, not established Rust replacements for CoovaChilli.
 
@@ -65,6 +91,8 @@ Reference projects: [edge-dhcp](https://docs.rs/edge-dhcp/latest/edge_dhcp/), [d
 The initial source review estimated 2–4 engineer-weeks for discovery, 4–8 engineer-weeks for a parser pilot, and 8–14 engineer-months in total for a focused Linux production replacement including those stages. A team of two experienced networking engineers should provisionally plan 5–9 calendar months. Broad feature and platform parity was estimated at 24–48+ engineer-months.
 
 These are planning ranges, not commitments. Unknown deployment requirements, forwarding choice, dependency reuse, strict allocation limits and embedded targets can change them. Setup, diagnostics, tuning, standalone providers, local record durability and multiple VLAN profiles expand the original scope and have not been separately estimated; do not treat them as free within the earlier range. Re-estimate after milestones 0 and 1 using the preferred userspace design and operator acceptance criteria. Local credentials/vouchers and transparent gateway HA remain separate increments.
+
+The narrower controlled-lab MVP is provisionally 11–21 engineer-weeks from the current checkpoint, including the external portal fixture/contract, with the first local portal gate roughly 6–11 weeks of that. This separate estimate does not replace production qualification or imply measured delivery capacity; revisit it after the demo contract and Linux packet experiment. See [the work breakdown and assumptions](mvp-plan.md).
 
 ## Qualification scenarios
 

@@ -2,6 +2,8 @@
 
 IronGate should be useful without a separate RADIUS installation. Authentication, access policy and accounting are separate responsibilities with explicit configuration and supported combinations. Providers produce typed decisions; the gateway owns session enforcement, counters, quotas and expiry regardless of the identity source. These are proposed features, not implemented capabilities.
 
+The [MVP implementation plan](mvp-plan.md) makes local captive consent the first live demonstration and RADIUS-backed HTTPS login plus accounting the second required gate. The first RADIUS profile uses one explicit backend/method and separate authentication/accounting evidence; broader transport, challenge, failover and dynamic authorization support follows. Existing RADIUS examples select external UAM; a built-in RADIUS login flow will need an explicit schema/configuration increment rather than silently changing that mode's meaning.
+
 ## Deployment profiles
 
 | Profile | Required services | Intended behavior |

@@ -35,6 +35,7 @@ lease_seconds = 600
 upstream_servers = ["192.0.2.53"]
 
 [networks.portal]
+hosting = "external"
 mode = "external_uam"
 url = "https://guest.portal.example.test/login"
 secret_file = "/etc/irongate/secrets/guest-portal"
@@ -77,6 +78,7 @@ lease_seconds = 600
 upstream_servers = ["192.0.2.53"]
 
 [networks.portal]
+hosting = "external"
 mode = "external_uam"
 url = "https://staff.portal.example.test/login"
 secret_file = "/etc/irongate/secrets/staff-portal"
