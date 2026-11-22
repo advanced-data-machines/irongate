@@ -1,63 +1,9 @@
-//! End-to-end CLI contracts. Only private temporary files are created.
+//! Configuration CLI contracts. Only private temporary files are created.
 
-use std::path::{Path, PathBuf};
-use std::process::{Command, Output};
-use std::sync::atomic::{AtomicU64, Ordering};
-
-use serde_json::Value;
-
-static SEQUENCE: AtomicU64 = AtomicU64::new(0);
-
-struct Scratch(PathBuf);
-
-impl Scratch {
-    fn new() -> Self {
-        let path = std::env::temp_dir().join(format!(
-            "irongate-cli-test-{}-{}",
-            std::process::id(),
-            SEQUENCE.fetch_add(1, Ordering::Relaxed)
-        ));
-        std::fs::create_dir(&path).unwrap();
-        Self(path)
-    }
-
-    fn write(&self, name: &str, contents: &[u8]) -> PathBuf {
-        let path = self.0.join(name);
-        std::fs::write(&path, contents).unwrap();
-        path
-    }
-}
-
-impl Drop for Scratch {
-    fn drop(&mut self) {
-        let _ = std::fs::remove_dir_all(&self.0);
-    }
-}
-
-fn command() -> Command {
-    Command::new(env!("CARGO_BIN_EXE_ig"))
-}
-
-fn report(output: &Output, code: i32) -> Value {
-    assert_eq!(
-        output.status.code(),
-        Some(code),
-        "stdout={} stderr={}",
-        String::from_utf8_lossy(&output.stdout),
-        String::from_utf8_lossy(&output.stderr)
-    );
-    assert!(
-        output.stderr.is_empty(),
-        "JSON failures must not mix diagnostics into the output: {}",
-        String::from_utf8_lossy(&output.stderr)
-    );
-    let value: Value =
-        serde_json::from_slice(&output.stdout).expect("exactly one valid JSON document");
-    assert_eq!(value["schema_version"], 1);
-    assert_eq!(value["runtime_verified"], false);
-    assert_eq!(value["exit_code"], code);
-    value
-}
+mod common;
+use common::{Scratch, command, report};
+use std::path::Path;
+use std::process::Output;
 
 fn check(path: &Path) -> Output {
     command()
@@ -160,12 +106,22 @@ fn json_escapes_unusual_file_paths_and_unknown_keys() {
 #[test]
 fn usage_failures_remain_json_and_never_execute_unimplemented_commands() {
     for args in [
-        vec!["doctor", "--json"],
         vec!["apply", "--json"],
         vec!["config", "check", "--json", "--typo"],
         vec!["config", "check", "--json", "--config"],
         vec!["config", "check", "--config", "--json"],
         vec!["config", "check", "--json", "--format", "text"],
+        vec!["config", "check", "--json", "--network", "guest"],
+        vec!["doctor", "--json", "--network"],
+        vec!["doctor", "--json", "--network", "../unsafe"],
+        vec![
+            "doctor",
+            "--json",
+            "--network",
+            "guest",
+            "--network",
+            "staff",
+        ],
     ] {
         let value = report(&command().args(args).output().unwrap(), 2);
         assert_eq!(value["command"], "cli");

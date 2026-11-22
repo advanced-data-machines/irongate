@@ -1,6 +1,6 @@
 # IronGate roadmap
 
-The workspace has completed its first operator increment: offline `ig config check`, text/JSON output and regression tests. Host preflight, packet handling and runtime gateway behavior remain unimplemented. Checklist completion requires implementation evidence and the acceptance criteria below.
+The workspace provides offline `ig config check` and an initial read-only `ig doctor` with scoped interface evidence, text/JSON reports and regression tests. Broader host preflight, packet handling and runtime gateway behavior remain unimplemented. Checklist completion requires implementation evidence and the acceptance criteria below.
 
 ## Current progress
 
@@ -18,6 +18,10 @@ The workspace has completed its first operator increment: offline `ig config che
 - [x] Implement text/JSON `ig config check` with stable codes, field paths and redacted failures.
 - [x] Test all three profiles, malformed/contradictory configurations and real CLI contracts.
 - [x] Document a minimal dependency set and disposable VM plan for future packet testing.
+- [x] Implement passive Linux interface existence, link-state, MTU and driver checks with profile selection.
+- [x] Preserve VLAN roles while inspecting shared trunks once; distinguish missing and unavailable evidence.
+- [x] Test doctor through private fixtures and separate CLI modules, without new external dependencies.
+- [x] Add config-free host inventory with active-link evidence, driver-reported speed/duplex, bounded enumeration and explicit unavailable values.
 - [ ] Inventory deployed CoovaChilli options and integration contracts.
 - [ ] Capture a reproducible behavioral and performance baseline.
 - [ ] Set numerical packet-rate, latency, memory, revocation and accounting-lag targets for the first deployment profile.
@@ -39,7 +43,13 @@ The workspace has completed its first operator increment: offline `ig config che
 
 ## First implementation sequence
 
-The next operator increment is read-only doctor/preflight; it must distinguish unavailable evidence from a successful check. Packet lab provisioning belongs in a disposable VM, not on the development PC. See [testing boundaries](testing.md). Complete the deployment inventory and target selection alongside these increments.
+The first doctor/preflight slice is complete; [its scope](doctor.md) excludes routes, host guards, service conflicts, device capabilities and actual backend health. Future increments can add that evidence while keeping unavailable observations distinct from successful checks. Packet lab provisioning belongs in a disposable VM, not on the development PC. See [testing boundaries](testing.md). Complete the deployment inventory and target selection alongside these increments.
+
+### Recommended next checkpoint
+
+Keep the completed operator slice on `feature/doctor` for review. After integration into `release/0.1.x`, the recommended next branch is `feature/protocol-pilot`: a small offline Ethernet/IPv4/UDP/DHCP parsing and reply-encoding experiment in `irongate-proto`. Start with a documented packet corpus and explicit supported/rejected forms, borrowed packet views, caller-owned output buffers, and malformed-input/capacity tests. Demonstrate allocation-free parsing and encoding before adding a lease service or live sockets. This tests the project's performance and memory assumptions early while keeping all development safe on this PC. Live interoperability follows in the disposable VM.
+
+Clearer speed labels, Wi-Fi rate reporting and broader host preflight remain follow-ups; they do not block the protocol experiment. Record the first deployment's behavior and numerical targets alongside the pilot so its eventual benchmarks have useful acceptance criteria.
 
 1. Select one representative deployment and record its required behavior in `coova-compatibility.md`.
 2. Establish an isolated subscriber/gateway/upstream topology with a portal and RADIUS test server.

@@ -1,8 +1,8 @@
 # IronGate configuration and CLI contract
 
-Provide one small command-line interface for operators, shell scripts and AI agents. Readable TOML is the source of desired configuration; the CLI validates, inspects, plans, applies and verifies through shared library operations. Automation uses the same commands and evidence as a person. `ig config check` is implemented; the remaining interfaces below are proposals. See [current configuration behavior](configuration.md) for the exact supported schema and limits.
+Provide one small command-line interface for operators, shell scripts and AI agents. Readable TOML is the source of desired configuration; the CLI validates, inspects, plans, applies and verifies through shared operations. Automation uses the same commands and evidence as a person. `ig config check` and the first passive `ig doctor` are implemented. Broader interfaces below remain proposals. See [configuration](configuration.md) and [doctor](doctor.md) for exact supported scopes and limits.
 
-Use `ig` as the operator command, with `irongated` as the daemon. The operator binary currently implements config check, help and version only. Keep one canonical command contract for both people and automation.
+Use `ig` as the operator command, with `irongated` as the daemon. The operator binary currently implements config check, local-interface doctor with `--network`, config-free host inventory with `doctor --host`, help and version. Keep one canonical command contract for both people and automation.
 
 ## Configuration ownership
 
@@ -22,7 +22,8 @@ Use explicit `[[networks]]` entries for subscriber bindings, per-VLAN portals, p
 | `ig config check` | Validate syntax, schema and cross-field rules without probing or mutating the host |
 | `ig config show --effective` | Show resolved defaults and field provenance, with secret references redacted as required |
 | `ig config set KEY VALUE --output PATH` | Validate and write a candidate TOML change; preserve comments and unrelated fields |
-| `ig doctor` | Inspect host prerequisites and report actionable findings; no network changes |
+| `ig doctor` | Implemented: passive local interface preflight; broader prerequisites remain planned |
+| `ig doctor --host` | Implemented: config-free host interface inventory, active links, driver-reported speed and duplex; text or JSON |
 | `ig doctor --client CLIENT --window 60s` | Correlate retained session throughput, limit sources, drops and accounting health over a declared window |
 | `ig doctor --scope accounting --json` | Return structured accounting lag, retries, counter interpretation and capacity findings |
 | `ig doctor --network guest` | Report readiness, portal/provider selection, capacity and diagnostics for one network profile |
@@ -72,6 +73,8 @@ Illustrative doctor result:
 Stable finding codes support rules and scripts; text is for explanation and may improve over time. Findings distinguish pass, fail, warning, unsupported and unverified. An unknown result must not become a pass. Include evidence age and which vantage point produced it for runtime checks. Suggested actions are data, not commands automatically executed by the CLI.
 
 Doctor is passive by default; active protocol or throughput probes require explicit verification commands. See [accounting diagnostics](accounting-diagnostics.md) for session/window identity, counter definitions, retention limits and evidence requirements. It must distinguish confirmed local behavior from unverified remote delivery and backend ingestion.
+
+The current doctor exposes a scoped `checks` array, nested `config` result, evidence source/time and `runtime_verified = false`. It does not implement per-client/windows/accounting scopes yet. Its `complete` field concerns required local interface observations; use [the implemented exit policy](doctor.md) rather than assuming optional unverified probes block an otherwise passing local scope.
 
 ## Exit status proposal
 

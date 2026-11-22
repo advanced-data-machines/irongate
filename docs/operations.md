@@ -1,6 +1,6 @@
 # IronGate setup and behavior verification
 
-IronGate should explain the intended deployment, the host changes it requires, the client behavior it observed, and the reason a session or packet was allowed or denied. These capabilities are product requirements alongside forwarding correctness. The commands below are proposed interfaces, not implemented utilities.
+IronGate should explain the intended deployment, the host changes it requires, the client behavior it observed, and the reason a session or packet was allowed or denied. These capabilities are product requirements alongside forwarding correctness. Static config checks and initial [read-only doctor](doctor.md) are implemented; broader commands below remain proposals.
 
 ## Configuration and setup
 
@@ -26,7 +26,7 @@ Support managed mode, where IronGate creates a bounded set of named host resourc
 
 Names and flags are design proposals. Add an operator crate only when implementing the first useful commands. Configuration checking and doctor should be usable before the daemon is installed or running.
 
-Host preflight checks interface identity and ownership, link state, addresses and routes, privilege/capability requirements, socket conflicts, DHCP ownership, DNS and portal reachability, RADIUS configuration, MTU, clock health, and alternate bypass paths. A UDP endpoint being reachable does not prove that credentials, authenticators or accounting work. Inspection may be unavailable or incomplete under limited privileges; report that distinction.
+The planned full host preflight covers interface identity and ownership, link state, addresses and routes, privilege/capability requirements, socket conflicts, DHCP ownership, DNS/portal reachability, RADIUS configuration, MTU, clock health, and alternate bypass paths. The implemented first slice reads interface presence, flags, operational state, carrier, MTU and driver name only. A UDP endpoint being reachable does not prove that credentials, authenticators or accounting work. Inspection may be unavailable or incomplete under limited privileges; report that distinction.
 
 ## Evidence and error reporting
 

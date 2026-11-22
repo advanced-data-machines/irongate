@@ -2,6 +2,8 @@
 
 Use established crates when they remove meaningful correctness risk, with a small explicit feature set and a clear boundary. Avoid adding a framework or subsystem for hypothetical future use. The current operator/configuration milestone has four direct third-party dependencies; the packet/session core and protocol scaffolds remain dependency-free.
 
+The initial doctor backend uses standard-library sysfs reads and adds no dependencies. Keep entry points short and organize related parsing, rules, I/O and rendering into focused modules; introduce shared abstractions only when another real caller needs them.
+
 | Crate | Purpose | Enabled scope |
 | --- | --- | --- |
 | `toml` | Standards-compliant TOML parsing with source spans and borrowable strings | Only parse/std; default Serde deserialization, formatting and optional order-preserving/hash features disabled |

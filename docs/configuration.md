@@ -11,7 +11,7 @@ cargo build -p irongate-cli
 ./target/debug/ig --help
 ```
 
-Without `--config`, the file is `irongate.toml` in the current working directory. `--format text|json` and `--json` select output. Options work before or after `config check`; duplicate/conflicting format or config options are rejected. `--no-color` is accepted and output is always plain. Help/version are human-readable even when JSON is requested. Other proposed commands/options are rejected rather than silently ignored.
+Without `--config`, the file is `irongate.toml` in the current working directory. `--format text|json` and `--json` select output. Options work before or after `config check`; duplicate/conflicting format or config options are rejected. `--no-color` is accepted and output is always plain. Help/version are human-readable even when JSON is requested. Unimplemented commands/options are rejected rather than silently ignored; the separate [doctor command](doctor.md) now provides passive interface preflight.
 
 Exit 0 means static validation passed, possibly with warnings. Exit 2 means invalid command, input, schema or field relationships. Exit 3 means permission to read the input was denied. Exit 7 indicates an output/internal failure. JSON is one document on stdout, including validation and argument errors; expected JSON failures do not emit additional stderr text. Text argument errors use stderr. Report schema version 1 is independent of input schema version 1.
 
@@ -44,4 +44,4 @@ The input limit is 1 MiB; at most 256 findings are retained, with an explicit tr
 
 Referenced paths are checked for absolute syntax only. Their existence, permissions and content remain unverified. The input itself must be a regular file; symlinks to regular files work. This checker is not a security boundary against hostile concurrent replacement of a supplied filesystem path, and it makes no deadline guarantee for a stalled network filesystem. Use repository-local files for development tests.
 
-There is no host health inspection, config editing, deployment plan, apply, daemon reload or automatic repair in this milestone. The [CLI design contract](cli-contract.md) describes future interfaces separately.
+Config check itself performs no host health inspection. The separate [doctor command](doctor.md) reads local interface state only. Config editing, deployment plans, apply, daemon reload and automatic repair remain unimplemented. The [CLI design contract](cli-contract.md) describes future interfaces separately.

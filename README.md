@@ -2,7 +2,7 @@
 
 A Rust network access gateway project starting from CoovaChilli's behavior and deployment requirements. The intended scope includes captive portal access, RADIUS authentication and accounting, DHCP integration, per-client policy, quotas, and bandwidth enforcement.
 
-IronGate currently provides offline TOML configuration validation through `ig config check`. It does not serve DHCP, authenticate clients, forward traffic, or configure the host network. Doctor, NIC tools and apply commands remain planned.
+IronGate currently provides offline TOML validation through `ig config check` and read-only Linux interface preflight through `ig doctor`. It does not serve DHCP, authenticate clients, forward traffic, or configure the host network. Broader NIC tools and apply commands remain planned.
 
 ## Try the CLI
 
@@ -12,6 +12,15 @@ cargo run -p irongate-cli -- config check --config examples/vlan-portals.toml --
 ```
 
 These commands read the selected TOML file only. They do not access referenced secrets, resolve service names, open network sockets, or change host networking. The examples use documentation-only service addresses, so a passing result includes warnings and explicitly leaves runtime readiness unverified. See [configuration validation](docs/configuration.md).
+
+For passive interface checks:
+
+```sh
+cargo run -p irongate-cli -- doctor --host
+cargo run -p irongate-cli -- doctor --config examples/vlan-portals.toml --network staff --json
+```
+
+Doctor includes host interface state, active-link evidence, MTU/driver metadata, and driver-reported speed and duplex when available. `--host` needs no TOML. It sends no traffic and changes no settings. Example interface names may be absent on this PC; doctor reports that without creating or modifying them. A pass covers local interfaces only, with backend health and gateway behavior still unverified. See [doctor scope and exit codes](docs/doctor.md).
 
 With [just](https://github.com/casey/just) installed, the common commands are:
 
@@ -30,8 +39,8 @@ just ig config check --config examples/standalone.toml --json
 | --- | --- | --- |
 | `irongate-core` | Session ownership, policy, accounting, quotas, and timers | Empty `no_std` library; no dependencies or allocator imported |
 | `irongate-proto` | Borrowed protocol parsing and bounded encoding | Empty `no_std` library; no dependencies or allocator imported |
-| `irongate-config` | Schema and cross-field checks | Static validator with bounded input and findings; borrowed TOML views where supported |
-| `irongate-cli` | Operator command `ig` | `config check`, text/JSON results, help and version |
+| `irongate-config` | Schema, cross-field checks and minimal host requirements | Bounded input and findings; borrowed TOML views where supported |
+| `irongate-cli` | Operator command `ig` | `config check`, passive `doctor`, text/JSON results, help and version |
 | `irongated` | Host process, configuration, adapters, and event loop | Prints scaffold status and exits |
 
 Use Rust 1.85 or newer with edition 2024 support. Validation used Rust 1.100.0; the declared minimum has not been tested. Four direct third-party crates support configuration/address parsing and JSON output; see the [dependency policy](docs/dependencies.md). The core and protocol crates remain dependency-free. Offline builds require dependencies to have been cached already.
@@ -46,6 +55,8 @@ cargo doc --workspace --no-deps --offline
 ```
 
 Tests cover the example profiles, conflicting VLANs/subnets, provider references, resource limits, malformed input, redaction and actual CLI output/exit codes. Protocol forwarding and session behavior remain unimplemented. A successful configuration check establishes internal consistency for the supported profile, not gateway correctness or measured capacity.
+
+Doctor tests use private filesystem fixtures for link evidence, shared trunks, scope selection and incomplete observations. Keep `lib.rs` and `main.rs` as short entry points; put related behavior in focused, readable modules.
 
 ## Design and progress
 
@@ -64,6 +75,7 @@ Tests cover the example profiles, conflicting VLANs/subnets, provider references
 - [Per VLAN portals and network isolation](docs/vlan-networks.md)
 - [Standalone TOML profile](examples/standalone.toml) and [VLAN portal profile](examples/vlan-portals.toml)
 - [Implemented configuration checks](docs/configuration.md)
+- [Read only doctor](docs/doctor.md)
 - [Dependency choices and binary data direction](docs/dependencies.md)
 - [Development PC and isolated VM testing](docs/testing.md)
 
