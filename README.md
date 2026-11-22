@@ -43,7 +43,7 @@ just ig config check --config examples/standalone.toml --json
 | `irongate-cli` | Operator command `ig` | `config check`, passive `doctor`, text/JSON results, help and version |
 | `irongated` | Host process, configuration, adapters, and event loop | Prints scaffold status and exits |
 
-Use Rust 1.85 or newer with edition 2024 support. Validation used Rust 1.100.0; the declared minimum has not been tested. Four direct third-party crates support configuration/address parsing and JSON output; see the [dependency policy](docs/dependencies.md). The core and protocol crates remain dependency-free. Offline builds require dependencies to have been cached already.
+Use Rust 1.100 or newer with edition 2024 support. Validation used Rust 1.100.0, matching the declared minimum. This baseline permits evaluation of the stable allocator API; no custom allocator is currently used. Four direct third-party crates support configuration/address parsing and JSON output; see the [dependency policy](docs/dependencies.md). The core and protocol crates remain dependency-free. Offline builds require dependencies to have been cached already.
 
 ```sh
 cargo build --workspace --offline
