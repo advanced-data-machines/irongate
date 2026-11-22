@@ -5,6 +5,8 @@
 pub enum Layer {
     /// Ethernet or VLAN header.
     Ethernet,
+    /// Direct Ethernet/IPv4 ARP.
+    Arp,
     /// IPv4 header or datagram.
     Ipv4,
     /// UDP header or checksum.

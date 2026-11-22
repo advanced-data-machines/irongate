@@ -87,6 +87,6 @@ The coverage-backed CRAP run analyzed **190 functions across 46 source files**, 
 
 ## Next boundary
 
-Next is the isolated Linux packet lab: one untagged client, real DHCP/ARP, native local service reachability, bidirectional userspace transit and independently observed unauthorized-drop/revocation/crash guards. Ratify the VM acceptance profile before treating load measurements as gates. Keep all links and mutations inside QEMU; this offline feature changed no host networking and did not boot or modify the VM.
+The subsequent [Linux packet lab](linux-packet-lab.md) now proves the initial live path. Its scope is one untagged client, real DHCP/ARP, native local service reachability, bidirectional userspace transit and independently observed unauthorized-drop/revocation/crash guards. Ratify the VM acceptance profile before treating load measurements as gates. Keep all links and mutations inside QEMU; this offline feature changed no host networking and did not boot or modify the VM.
 
-The consent portal follows the enforcement proof. RADIUS authentication/accounting and external/cloud handoff then use the same admission ownership. No live policy adapter, accounting reservation/journal, HTTP service, secure portal handoff, provider integration or production qualification is included here. See the [MVP plan](mvp-plan.md).
+The consent portal is the next product increment after reviewing that enforcement proof. RADIUS authentication/accounting and external/cloud handoff then use the same admission ownership. No live policy adapter, accounting reservation/journal, HTTP service, secure portal handoff, provider integration or production qualification is included here. See the [MVP plan](mvp-plan.md).

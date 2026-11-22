@@ -76,6 +76,23 @@ vm-command:
 vm-boot:
     bash tools/vm/boot.sh
 
+# Provision a separate guest image; temporary QEMU userspace NAT downloads packages.
+vm-lab-prepare:
+    python3 -m tools.vm.lab.prepare
+
+# Inspect the NIC-free lab command without preparing or booting a VM.
+vm-lab-command:
+    python3 -m tools.vm.lab.run --print
+
+# Test VM report/isolation contracts without starting a VM or touching networking.
+vm-lab-check:
+    python3 -m unittest tools.vm.lab.test_host
+
+# Build the static lab adapter; then boot a fresh guest-only packet scenario.
+vm-lab-test:
+    cargo build -p irongated --release --target x86_64-unknown-linux-musl --offline
+    python3 -m tools.vm.lab.run
+
 # Render the two-page performance brief using an installed Chrome/Chromium browser.
 brochure:
     python3 scripts/render-brochure.py

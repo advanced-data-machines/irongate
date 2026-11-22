@@ -63,6 +63,8 @@ The second boot finished cloud-init at about 4.14 seconds of guest uptime, with 
 
 Press **Ctrl-a, then c** to switch from the guest serial console to QEMU's monitor. Try `info kvm`, `info block` and `info network`, then Ctrl-a, c to return. This monitor controls the virtual machine, not a shell in Debian. **Ctrl-a, then x** exits QEMU immediately; use it only if needed because it is equivalent to removing guest power. Prefer `sudo poweroff` for normal shutdown.
 
-Lesson two will inspect the base/overlay relationship and preserve a clean checkpoint. Networking comes after that: temporary QEMU userspace NAT for guest package preparation, then the isolated namespaces/VLAN topology in [the VM demo](vm-demo.md). This lesson does not provision that network lab or run IronGate as a gateway.
+The automated [packet-lab lesson](linux-packet-lab.md) now provisions a separate package image with temporary userspace NAT, then tests with `-nic none` and read-only seed artifacts. It preserves the interactive learning disk and requires no guest login.
+
+Further interactive lessons can inspect the base/overlay relationship and preserve a clean checkpoint. Networking comes after that: temporary QEMU userspace NAT for guest package preparation, then the isolated namespaces/VLAN topology in [the VM demo](vm-demo.md). The original interactive lesson remains separate from that automated packet lab.
 
 References: [QEMU accelerators](https://www.qemu.org/docs/master/system/introduction.html), [QEMU options](https://www.qemu.org/docs/master/system/qemu-manpage.html), and the [official Debian image location](https://cloud.debian.org/images/cloud/trixie/20261116-2664/).

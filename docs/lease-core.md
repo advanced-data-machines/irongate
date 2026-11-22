@@ -90,4 +90,4 @@ The existing C/Rust framework still compares only option/OFFER helpers: 22 cases
 
 ## Next increment
 
-The independent [session/admission owner](session-core.md) is now implemented and tested offline with a simulated worker. Next add a thin Linux adapter in the disposable VM, first for one untagged DHCP client plus ARP. Keep the VM's external NIC disconnected and create the client links inside the guest. Prove real DHCP interoperability, unauthorized-drop and revocation/crash guards before connecting the local consent portal. See the [MVP plan](mvp-plan.md) and [VM boundaries](vm-demo.md).
+The independent [session/admission owner](session-core.md) is now implemented and tested offline with a simulated worker. The [Linux packet lab](linux-packet-lab.md) now adds the first thin adapter in the disposable VM for one untagged DHCP client plus ARP, native local TCP and gated transit. Keep the VM's external NIC disconnected and create the client links inside the guest. Prove real DHCP interoperability, unauthorized-drop and revocation/crash guards before connecting the local consent portal. See the [MVP plan](mvp-plan.md) and [VM boundaries](vm-demo.md).

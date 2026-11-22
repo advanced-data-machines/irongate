@@ -23,6 +23,12 @@ Run `just crap` to regenerate fresh workspace coverage and the complete JSON/Mar
 
 The [session feature](session-core.md) extends the development checkpoint to 113 passing Rust tests and 190 analyzed functions across 46 matched source/LCOV files. The highest new session CRAP score is 12.0, with no new functions over 30; the CLI parser finding remains open. The session replay measured equal setup/replay heap totals over 100000 extra admission/cleanup cycles. Its worker is simulated, so these results establish neither live enforcement nor gateway performance. Keep the original checkpoint above as historical evidence rather than silently replacing its scope.
 
+## First live packet checkpoint
+
+The [Linux packet lab](linux-packet-lab.md) passed seven live scenarios in fresh NIC-free QEMU overlays, with independent BusyBox/TCP/DNS client evidence and a persistent nftables crash guard exercised with kernel routing enabled and neighbors fixed. It records per-run source/binary/image/tool/topology identity, exact case outcomes and cleanup status. This is a one-client functional checkpoint, not Gate A or measured capacity.
+
+The accompanying checkpoint passed 122 Rust tests, 16 comparison-framework regressions and 10 host-only lab-contract tests. CRAP now analyzes 211 functions across 54 matched files. The CLI parser remains at 39.32; the new live `io::run` entry scores 207.02 with about 13% ordinary-test coverage. Guest execution is not merged into LCOV. That startup/coverage finding is open, not waived; retain the distinction between scenario evidence and coverage-backed quality evidence before launch.
+
 ## Release bundle contract
 
 Before publishing a release candidate, retain the following together:

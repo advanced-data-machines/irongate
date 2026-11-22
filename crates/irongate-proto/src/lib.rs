@@ -7,12 +7,14 @@
 #![no_std]
 #![forbid(unsafe_code)]
 
+pub mod arp;
 mod checksum;
 pub mod dhcp;
 mod error;
 pub mod ethernet;
 pub mod ipv4_udp;
 mod request;
+pub mod routed;
 
 pub use error::{Error, Layer};
 pub use request::{RequestFrame, parse_request};
