@@ -38,6 +38,14 @@ impl<'a> Table<'a> {
     pub fn capacity(&self) -> usize {
         self.slots.len()
     }
+    /// Trusted network selected when this pool was constructed.
+    pub fn network(&self) -> super::NetworkId {
+        self.config.network
+    }
+    /// Owner-assigned arena identity; dependent owners must reject replacement pools.
+    pub fn epoch(&self) -> u64 {
+        self.config.epoch
+    }
     /// Most recent successful explicit time advance; no OS clock is read.
     pub fn now(&self) -> u64 {
         self.now

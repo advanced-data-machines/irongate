@@ -42,6 +42,15 @@ lease-allocations:
     cargo build -p irongate-proto --example lease_replay --release --offline
     python3 scripts/check-protocol-allocations.py "${CARGO_TARGET_DIR:-target}/release/examples/lease_replay"
 
+# Demonstrate offline consent, policy acknowledgements and revocation.
+session-demo:
+    cargo run -p irongate-core --example session_demo --offline
+
+# Check heap totals across 100000 admission/cleanup lifecycles.
+session-allocations:
+    cargo build -p irongate-core --example session_replay --release --offline
+    python3 scripts/check-protocol-allocations.py "${CARGO_TARGET_DIR:-target}/release/examples/session_replay"
+
 # Check comparison contracts without requiring Coova, a C compiler or Valgrind.
 comparison-check:
     python3 -m unittest discover -s tools/coova_compare -p 'test_*.py'

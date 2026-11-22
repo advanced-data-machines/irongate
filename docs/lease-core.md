@@ -21,7 +21,7 @@ flowchart LR
     table --> reply[Offer / Ack / Nak / silent effect]
     reply --> encode[Encode into caller-owned output]
     encode --> output[Offline reply bytes]
-    table --> future[Future session and admission owner]
+    table --> future[Separate session and admission owner]
 ```
 
 The critical state-changing work is in [`lease/table.rs`](../crates/irongate-core/src/lease/table.rs), [`lease/requests.rs`](../crates/irongate-core/src/lease/requests.rs) and [`lease/maintenance.rs`](../crates/irongate-core/src/lease/maintenance.rs). Protocol classification and shared reply writing are separate small modules in [`dhcp`](../crates/irongate-proto/src/dhcp). `lib.rs` remains a short entry point.
@@ -60,7 +60,7 @@ The 256-address cap is a pilot work bound, not a production scaling claim. Inlin
 
 Call `advance(now, events)` and consume `events[..count]` **before** applying commands at that time or reusing addresses. On success only that prefix contains new events; trailing cells may retain old contents. The owner must also consume RELEASE/DECLINE effects before dependent session state can survive address reuse. The table does not run callbacks, revoke access or persist events itself.
 
-A bound lease establishes address ownership only. It never grants upstream access. The next session/admission slice must retain independent portal authorization and correlate its asynchronous work with the current lease generation. Admission, policy application, accounting and revocation remain unimplemented.
+A bound lease establishes address ownership only. It never grants upstream access. The [session/admission foundation](session-core.md) now correlates consent and retained policy effects with the lease generation. Actual policy application, the portal service, accounting and live revocation remain unimplemented.
 
 ## Wire behavior
 
@@ -90,4 +90,4 @@ The existing C/Rust framework still compares only option/OFFER helpers: 22 cases
 
 ## Next increment
 
-Finish the independent session/admission owner and its bounded effects before M2 forwarding work. Then add a thin Linux adapter in the disposable VM, first for one untagged DHCP client plus ARP. Keep the VM's external NIC disconnected and create the client links inside the guest. Prove real DHCP interoperability, unauthorized-drop and revocation/crash guards before connecting the local consent portal. See the [MVP plan](mvp-plan.md) and [VM boundaries](vm-demo.md).
+The independent [session/admission owner](session-core.md) is now implemented and tested offline with a simulated worker. Next add a thin Linux adapter in the disposable VM, first for one untagged DHCP client plus ARP. Keep the VM's external NIC disconnected and create the client links inside the guest. Prove real DHCP interoperability, unauthorized-drop and revocation/crash guards before connecting the local consent portal. See the [MVP plan](mvp-plan.md) and [VM boundaries](vm-demo.md).

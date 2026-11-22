@@ -1,9 +1,11 @@
 //! Bounded, allocator-independent network access foundations.
 //!
 //! The DHCP lease engine borrows caller-owned storage and an explicit clock.
-//! Leases do not authorize access. Portal sessions and enforcement are future work.
+//! Leases do not authorize access. Sessions require an explicit consent decision
+//! and policy acknowledgement. Platform enforcement remains external.
 
 #![no_std]
 #![forbid(unsafe_code)]
 
 pub mod lease;
+pub mod session;

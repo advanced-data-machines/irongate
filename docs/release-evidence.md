@@ -19,6 +19,10 @@ CRAP is a per-function complexity/coverage metric, not one project score or a pe
 
 Run `just crap` to regenerate fresh workspace coverage and the complete JSON/Markdown reports in `target/quality/`. It requires installed coverage/analysis tools and cached Cargo dependencies, with no new runtime crates. The console prints only the top ten functions; use the complete JSON report for totals and release decisions. The recipe currently reports findings without failing on the threshold, and is separate from `just check`.
 
+## Session foundation checkpoint
+
+The [session feature](session-core.md) extends the development checkpoint to 113 passing Rust tests and 190 analyzed functions across 46 matched source/LCOV files. The highest new session CRAP score is 12.0, with no new functions over 30; the CLI parser finding remains open. The session replay measured equal setup/replay heap totals over 100000 extra admission/cleanup cycles. Its worker is simulated, so these results establish neither live enforcement nor gateway performance. Keep the original checkpoint above as historical evidence rather than silently replacing its scope.
+
 ## Release bundle contract
 
 Before publishing a release candidate, retain the following together:
