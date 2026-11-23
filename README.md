@@ -8,6 +8,8 @@ The [MVP plan](docs/mvp-plan.md) works backward from a real captive portal demo:
 
 Portal configuration explicitly distinguishes [local on-device and external/cloud hosting](docs/portal-hosting.md), including tenant-scoped metadata and per-VLAN placement. See [the cloud example](examples/cloud-portal.toml) and [the proposed isolated VM](docs/vm-demo.md). These are validated configuration contracts; the [local consent portal](docs/local-consent-portal.md) now runs in the isolated lab. External hosting remains unimplemented.
 
+For the next development session, start with the [session handoff](docs/handoff.md), which records the release checkpoint, evidence locations and HTTPS next steps.
+
 ## Try the CLI
 
 ```sh
