@@ -37,7 +37,7 @@ def overlay(backing, disk):
 
 
 def seed(directory, run_id, mode):
-    startup = "bash /opt/irongate-lab/provision.sh" if mode == "prepare" else f"python3 /opt/irongate-lab/guest.py {run_id}"
+    startup = "bash /opt/irongate-lab/provision.sh" if mode == "prepare" else f"python3 /opt/irongate-lab/guest.py {run_id} > /dev/ttyS0 2>&1"
     # Only guest cloud-init executes this shell text; all values are fixed or hex.
     script = ("#!/bin/bash\nset -euo pipefail\n"
               "test \"$(cat /sys/class/dmi/id/sys_vendor)\" = QEMU\n"

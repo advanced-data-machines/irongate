@@ -109,6 +109,7 @@ class SeedAndCommand(unittest.TestCase):
             self.assertNotIn("mount", script)
             self.assertIn("systemctl poweroff", script)
             self.assertIn("/opt/irongate-lab/guest.py", script)
+            self.assertIn("> /dev/ttyS0 2>&1", script)
             self.assertEqual(run.call_args.args[0][0], "cloud-localds")
 
     def test_absent_result_is_an_error_instead_of_stale_success(self):

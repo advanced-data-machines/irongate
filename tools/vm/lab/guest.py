@@ -6,6 +6,7 @@ import platform
 import subprocess
 import sys
 import time
+import termios
 import traceback
 from guest_common import WORK, GATEWAY, UPSTREAM, command, guard, spawn
 import scenarios
@@ -78,6 +79,10 @@ def main(run_id):
         if report.get("portal"):
             report["screenshots"]=artifacts.export(WORK,run_id)
         print("IG_LAB_RESULT " + json.dumps(report, separators=(",", ":")), flush=True)
+        # The seed connects stdout directly to the serial TTY. Drain all image
+        # chunks and the result before the shell requests shutdown; cloud-init
+        # tee buffering otherwise lets shutdown logs interrupt exported chunks.
+        termios.tcdrain(sys.stdout.fileno())
     return 0 if report["status"] == "passed" else 1
 
 
