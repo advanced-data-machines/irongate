@@ -37,13 +37,14 @@ def overlay(backing, disk):
 
 
 def seed(directory, run_id, mode):
-    startup = "bash /opt/irongate-lab/provision.sh" if mode == "prepare" else f"python3 /opt/irongate-lab/guest.py {run_id} > /dev/ttyS0 2>&1"
+    startup = "bash /opt/irongate-lab/provision.sh" if mode == "prepare" else f"python3 /opt/irongate-lab/guest.py {run_id} > /dev/ttyS1 2>&1"
     # Only guest cloud-init executes this shell text; all values are fixed or hex.
     script = ("#!/bin/bash\nset -euo pipefail\n"
               "test \"$(cat /sys/class/dmi/id/sys_vendor)\" = QEMU\n"
               "trap 'systemctl poweroff' EXIT\n"
               "systemctl mask --now systemd-networkd-wait-online.service || true\n"
-              "chmod 700 /run/irongate-packet-lab\n" + startup + "\n")
+              "chmod 700 /run/irongate-packet-lab\n"
+              "stty -F /dev/ttyS1 raw -echo clocal -crtscts 115200\n" + startup + "\n")
     data = {"hostname": "irongate-packet-lab", "manage_etc_hosts": True,
             "ssh_pwauth": False, "disable_root": True, "package_update": False, "package_upgrade": False,
             "write_files": [
@@ -69,6 +70,7 @@ def seed(directory, run_id, mode):
 def qemu(directory, prepare=False):
     command = ["qemu-system-x86_64", "-name", "irongate-packet-lab", "-machine", "q35,accel=kvm",
                "-cpu", "host", "-smp", "4", "-m", "8192", "-display", "none", "-serial", "stdio",
+               "-serial", f"file:{directory / 'evidence.log'}",
                "-monitor", "none", "-no-reboot", "-drive", f"file={directory / 'disk.qcow2'},format=qcow2,if=virtio",
                "-drive", f"file={directory / 'seed.img'},format=raw,if=virtio,readonly=on"]
     if prepare:
@@ -87,10 +89,11 @@ def boot(directory, prepare=False):
 
 
 def result(directory, marker):
-    for line in (directory / "serial.log").read_text(errors="replace").splitlines():
+    path = directory / ("evidence.log" if marker == "IG_LAB_RESULT " and (directory / "evidence.log").exists() else "serial.log")
+    for line in path.read_text(errors="replace").splitlines():
         if marker in line:
             return json.loads(line.split(marker, 1)[1])
-    raise RuntimeError(f"No {marker.strip()} result; see {directory / 'serial.log'}")
+    raise RuntimeError(f"No {marker.strip()} result; see {path}")
 
 
 def new_run(parent, prefix):

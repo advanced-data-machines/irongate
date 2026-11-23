@@ -47,7 +47,7 @@ class PortalEvidence(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary:
             directory=Path(temporary)
             def write(rows):
-                (directory/"serial.log").write_text("\n".join("IG_LAB_ARTIFACT "+json.dumps(row) for row in rows))
+                (directory/"evidence.log").write_text("\n".join("IG_LAB_ARTIFACT "+json.dumps(row) for row in rows))
             write(items)
             artifacts.extract(directory,"a"*32,expected)
             self.assertEqual((directory/artifacts.NAMES[0]).read_bytes(),data)

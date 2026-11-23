@@ -85,6 +85,8 @@ class SeedAndCommand(unittest.TestCase):
     def test_demo_has_no_external_nic_or_host_share_and_seed_is_read_only(self):
         command = host.qemu(Path("/tmp/example"))
         self.assertEqual(command[-2:], ["-nic", "none"])
+        self.assertEqual(command.count("-serial"),2)
+        self.assertIn("file:/tmp/example/evidence.log",command)
         self.assertNotIn("-netdev", command)
         self.assertNotIn("-virtfs", command)
         self.assertNotIn("-fsdev", command)
@@ -109,7 +111,7 @@ class SeedAndCommand(unittest.TestCase):
             self.assertNotIn("mount", script)
             self.assertIn("systemctl poweroff", script)
             self.assertIn("/opt/irongate-lab/guest.py", script)
-            self.assertIn("> /dev/ttyS0 2>&1", script)
+            self.assertIn("> /dev/ttyS1 2>&1", script)
             self.assertEqual(run.call_args.args[0][0], "cloud-localds")
 
     def test_absent_result_is_an_error_instead_of_stale_success(self):
@@ -117,6 +119,11 @@ class SeedAndCommand(unittest.TestCase):
             directory = Path(temporary)
             (directory / "serial.log").write_text("guest never completed\n")
             with self.assertRaises(RuntimeError): host.result(directory, "IG_LAB_RESULT ")
+            (directory/"evidence.log").write_text('IG_LAB_RESULT {"status":"dedicated"}\n')
+            self.assertEqual(host.result(directory,"IG_LAB_RESULT ")["status"],"dedicated")
+            (directory/"evidence.log").write_text("incomplete\n")
+            (directory/"serial.log").write_text('IG_LAB_RESULT {"status":"stale"}\n')
+            with self.assertRaises(RuntimeError):host.result(directory,"IG_LAB_RESULT ")
 
 
 class NamespaceOwnership(unittest.TestCase):

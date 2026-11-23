@@ -24,7 +24,8 @@ def export(directory,run_id):
 def extract(directory,run_id,expected):
     if set(expected)!=set(NAMES):raise ValueError("Missing required browser screenshots")
     pieces={name:{}for name in NAMES};totals={}
-    for line in (directory/"serial.log").read_text(errors="replace").splitlines():
+    path=directory/("evidence.log"if (directory/"evidence.log").exists() else "serial.log")
+    for line in path.read_text(errors="replace").splitlines():
         if "IG_LAB_ARTIFACT "not in line:continue
         item=json.loads(line.split("IG_LAB_ARTIFACT ",1)[1]);name=item.get("name")
         if item.get("run_id")!=run_id or name not in pieces:raise ValueError("Unexpected screenshot identity")
