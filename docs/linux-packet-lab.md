@@ -2,7 +2,7 @@
 
 `feature/linux-packet-lab` connects the lease/session foundations to real Ethernet packets in a disposable QEMU guest. An independent BusyBox DHCP client obtains `10.50.10.100`, receives userspace ARP replies, reaches a native local HTTP fixture, and can reach a routed origin only after explicit test consent. Logout, access expiry and daemon death block both existing and new client TCP traffic.
 
-This is a one-client, untagged IPv4 experiment. The normal daemon still has no deployable gateway/configuration mode. The local HTTP page is a connectivity fixture, **not a consent portal**; admission currently uses a root-owned guest-only test control socket. RADIUS, accounting, cloud handoff, VLANs and production qualification remain pending.
+This is a one-client, untagged IPv4 experiment. The normal daemon still has no deployable gateway/configuration mode. The native HTTP listener now serves the [local consent portal](local-consent-portal.md); the original packet suite still uses private root-owned fixture controls. RADIUS, accounting, cloud handoff, VLANs and production qualification remain pending.
 
 ## Run and learn
 
@@ -78,4 +78,4 @@ The development checkpoint passed **122 Rust tests**, 16 comparison-framework te
 
 The initial coverage-backed CRAP report covered **211 functions across 54 matched source/LCOV files**. Two exceed 30: the existing CLI parser (39.32) and the new live `io::run` entry (207.02, about 13% ordinary-test line coverage). The latter executes in QEMU, but those execution counts are not collected by `just crap`; improving startup structure and collecting guest coverage are open pre-launch qualification tasks. The subsequent [startup/acceptance work](lab-acceptance.md) resolves the startup threshold finding: shared owner-turn and descriptor validation now have 100% ordinary-test line coverage. The CLI parser remains open; uncollected guest bootstrap/serving coverage is still explicit. Complete reports remain under `target/quality/`; see [release evidence](release-evidence.md).
 
-No packet-rate, latency, soak, multi-client capacity or hardware-performance claim follows from these smoke tests. Use the frozen numerical acceptance profile and add load/failure evidence before promoting this backend. The next product feature is the local consent portal through the same admission owner, followed by RADIUS authentication/accounting and then external/cloud handoff. A placeholder HTTP page and root-only test consent are not Gate A.
+No packet-rate, latency, soak, multi-client capacity or hardware-performance claim follows from these smoke tests. Use the frozen numerical acceptance profile and add load/failure evidence before promoting this backend. The [browser portal suite](local-consent-portal.md) separately exercises public consent through this owner. HTTPS/RADIUS authentication/accounting and external/cloud handoff remain pending. Private test consent alone does not establish Gate A.

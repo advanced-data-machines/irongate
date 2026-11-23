@@ -36,7 +36,7 @@ def prepare(created):
         command("sysctl", "-qw", f"net.ipv4.conf.{scope}.arp_ignore=8", namespace=GATEWAY)
     rules = '''table inet ig_lab {
       chain input { type filter hook input priority 0; policy drop;
-        iifname "down0" ip saddr 10.50.10.100 tcp dport 8080 accept; }
+        iifname "down0" ether saddr 02:00:00:00:00:02 ip saddr 10.50.10.100 tcp dport 8080 accept; }
       chain forward { type filter hook forward priority 0; policy drop;
         meta nfproto ipv6 counter drop comment "iglab-ipv6-deny";
         counter drop comment "iglab-transit-deny"; }

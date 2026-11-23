@@ -32,6 +32,9 @@ pub(super) fn turn(
     transport.wait()?;
     state.advance(clock())?;
     control_budget(state, &transport.control)?;
+    if let Some(portal) = &transport.portal {
+        portal.budget(state);
+    }
     for side in [Side::Down, Side::Up] {
         packet_budget(
             state,

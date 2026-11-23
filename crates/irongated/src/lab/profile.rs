@@ -73,7 +73,7 @@ pub fn lease_config() -> lease::PoolConfig {
         prefix: 24,
         first: CLIENT_IP,
         last: CLIENT_IP,
-        lease_seconds: 60,
+        lease_seconds: 300,
         offer_seconds: 10,
         decline_seconds: 30,
     }
@@ -83,6 +83,6 @@ pub fn session_config() -> session::Config {
         network: lease::NetworkId(1),
         epoch: 1,
         consent_seconds: 10,
-        max_authorized_seconds: 5,
+        max_authorized_seconds: 30,
     }
 }

@@ -1,5 +1,5 @@
 //! Unprivileged datagram and startup regressions.
 mod bridge;
 #[path = "../../../../irongate-proto/tests/common/mod.rs"]
-mod common;
+pub(crate) mod common;
 mod transport;

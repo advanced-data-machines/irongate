@@ -21,7 +21,7 @@ Inspect the actual active graph rather than just the lockfile: Cargo may record 
 
 ## Linux lab adapter review
 
-The [guest-only packet lab](linux-packet-lab.md) adds `rustix 1.1.5` to the Linux daemon with default features disabled and only `std`/`event` enabled. Its concrete use is safe `poll` on already-bound, inherited packet/control descriptors; the guest supervisor uses Python's standard socket API for setup. This avoids handwritten unsafe syscall/FD construction while retaining the project's `forbid(unsafe_code)` lint. The crate declares Rust 1.65 compatibility, below this workspace's minimum.
+The [guest-only packet lab](linux-packet-lab.md) adds `rustix 1.1.5` to the Linux daemon with default features disabled and only `std`/`event`/`rand` enabled. Its concrete use is safe OS randomness for portal actions and `poll` on already-bound, inherited packet/control descriptors; the guest supervisor uses Python's standard socket API for setup. This avoids handwritten unsafe syscall/FD construction while retaining the project's `forbid(unsafe_code)` lint. The crate declares Rust 1.65 compatibility, below this workspace's minimum.
 
 On this Linux target, `cargo tree -p irongated --edges normal --offline` shows only `rustix`, `bitflags` and `linux-raw-sys` as new active packages. Cargo.lock also records backend/platform alternatives such as `errno`, `libc` and Windows packages; these are not in that active Linux graph. No socket framework, packet stack or async runtime is added. `serde_json` is reused for bounded lab controls outside the packet loop. Kernel/network namespace mutation stays in explicitly invoked guest harness code. Physical-NIC capability/offload/privilege qualification is still pending.
 
@@ -30,3 +30,7 @@ On this Linux target, `cargo tree -p irongated --edges normal --offline` shows o
 Prefer borrowed byte views and caller-owned buffers in packet handling. Evaluate `rkyv` for a concrete binary snapshot or IPC layout after defining versioning, size limits, validation, alignment, lifetime and compatibility requirements. It is not a TOML parser, and a binary archive does not remove validation or session ownership requirements. Do not add it to this milestone without a binary boundary to implement and measure.
 
 Use a vetted serialization/parsing crate instead of hand-writing a general JSON or TOML implementation. Conversely, the current CLI's small fixed argument vocabulary is handled with the standard library; revisit a CLI framework when the command surface makes that simpler and less error-prone.
+
+## Native consent HTTP boundary
+
+The Linux-only lab additionally uses `httparse 1.10.1` for strict, bounded HTTP/1.1 request framing, with its default `std` feature. This established parser adds no runtime transitive dependencies. IronGate applies its own narrow Host/Origin/body policy after parsing; no general HTTP server, async runtime or web framework is added. Two standard-library HTTP workers use fixed request buffers and bounded channels. Existing `serde_json` handles small control/record responses outside packet processing. `rustix` adds its `rand` feature for nonblocking OS entropy; no separate random-number crate or weak fallback is used. See the [local consent boundary](local-consent-portal.md).

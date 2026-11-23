@@ -9,7 +9,10 @@ use std::{
 
 pub fn run(run_id: &str) -> Result<(), Box<dyn std::error::Error>> {
     guard(run_id)?;
-    let transport = Transport::inherited()?;
+    let mut transport = Transport::inherited()?;
+    let (portal, worker) = super::portal::Bridge::pair()?;
+    super::portal::start(worker, run_id)?;
+    transport.portal = Some(portal);
     let mut lease_slots = [irongate_core::lease::Slot::EMPTY];
     let mut session_slots = [irongate_core::session::Slot::EMPTY];
     let mut state = State::new(&mut lease_slots, &mut session_slots);

@@ -16,7 +16,8 @@ for line in sys.stdin:
             connection = socket.create_connection((host, int(port)), timeout=0.8)
             connection.settimeout(0.8)
             stream = connection.makefile("rb")
-        connection.sendall(b"GET / HTTP/1.1\r\nHost: origin.test\r\n\r\n")
+        header=target if host=="10.50.10.1" else "origin.test"
+        connection.sendall(f"GET / HTTP/1.1\r\nHost: {header}\r\n\r\n".encode())
         status = stream.readline(256)
         if not status.startswith(b"HTTP/1.1 200 "):
             raise RuntimeError("Unexpected HTTP status")
@@ -27,10 +28,11 @@ for line in sys.stdin:
                 break
             if header.lower().startswith(b"content-length:"):
                 length = int(header.split(b":", 1)[1])
-        if length is None or length > 1024:
+        if length is None or length > 16384:
             raise RuntimeError("Unbounded/missing fixture length")
         body = stream.read(length)
-        if body != b"irongate controlled origin\n":
+        expected = b"IronGate" in body if host=="10.50.10.1" else body==b"irongate controlled origin\n"
+        if not expected:
             raise RuntimeError("Unexpected fixture body")
         print(json.dumps({"reachable": True}), flush=True)
     except Exception as error:

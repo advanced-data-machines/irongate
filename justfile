@@ -86,7 +86,16 @@ vm-lab-command:
 
 # Test VM report/isolation contracts without starting a VM or touching networking.
 vm-lab-check:
-    python3 -m unittest tools.vm.lab.test_host
+    python3 -m unittest tools.vm.lab.test_host tools.vm.lab.test_portal
+
+# Prepare Chromium only inside a separate lab image with temporary userspace NAT.
+vm-portal-prepare:
+    python3 -m tools.vm.lab.prepare_portal
+
+# Exercise the real local consent page from a browser inside the client namespace.
+vm-portal-test:
+    cargo build -p irongated --release --target x86_64-unknown-linux-musl --offline
+    python3 -m tools.vm.lab.run --portal
 
 # Build the static lab adapter; then boot a fresh guest-only packet scenario.
 vm-lab-test:

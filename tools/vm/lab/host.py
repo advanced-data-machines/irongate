@@ -48,6 +48,7 @@ def seed(directory, run_id, mode):
             "ssh_pwauth": False, "disable_root": True, "package_update": False, "package_upgrade": False,
             "write_files": [
                 {"path": "/run/irongate-packet-lab/id", "content": run_id + "\n", "permissions": "0600"},
+                {"path":"/run/irongate-packet-lab/mode","content":"portal\n"if mode=="portal"else"packet\n","permissions":"0600"},
                 {"path": "/run/irongate-packet-lab/start.sh", "content": script, "permissions": "0700"}],
             "runcmd": [["bash", "/run/irongate-packet-lab/start.sh"]]}
     for artifact in sorted((directory / "payload").iterdir()):
@@ -82,7 +83,7 @@ def boot(directory, prepare=False):
     (directory / "command.json").write_text(json.dumps(command, indent=2) + "\n")
     with (directory / "serial.log").open("w") as log:
         subprocess.run(command, stdin=subprocess.DEVNULL, stdout=log, stderr=subprocess.STDOUT,
-                       timeout=600 if prepare else 180, check=True)
+                       timeout=600 if prepare else 300, check=True)
 
 
 def result(directory, marker):

@@ -10,6 +10,7 @@ import traceback
 from guest_common import WORK, GATEWAY, UPSTREAM, command, guard, spawn
 import scenarios
 import topology
+import artifacts
 
 
 def main(run_id):
@@ -18,6 +19,8 @@ def main(run_id):
     report = {"schema": 2, "suite": "untagged-acceptance-v1", "scope": "isolated_packet_lab", "run_id": run_id,
               "status": "in_progress", "cases": [], "kernel": platform.release()}
     logs = []
+    if (WORK/"mode").read_text().strip()=="portal":
+        report.update({"schema":3,"suite":"local-consent-v1","portal":True})
     try:
         interfaces = json.loads(command("ip", "-j", "link").stdout)
         if {item["ifname"] for item in interfaces} != {"lo"}:
@@ -28,7 +31,7 @@ def main(run_id):
         report["packages"] = command("dpkg-query", "-W", "-f=${Package}=${Version}\n",
                                      "iproute2", "nftables", "busybox", "ethtool", "python3").stdout.splitlines()
         report["topology"] = topology.prepare(created)
-        for namespace, host, port in [(UPSTREAM, "192.0.2.80", "80"), (GATEWAY, "10.50.10.1", "8080")]:
+        for namespace, host, port in [(UPSTREAM, "192.0.2.80", "80")]:
             log = (WORK / f"service-{port}.log").open("w")
             logs.append(log)
             children.append(spawn("python3", "/opt/irongate-lab/services.py", host, port,
@@ -72,6 +75,8 @@ def main(run_id):
         if report["cleanup_errors"]:
             report["status"] = "failed"
         report["logs"] = {p.name: p.read_text(errors="replace")[-8000:] for p in WORK.glob("*.log")}
+        if report.get("portal"):
+            report["screenshots"]=artifacts.export(WORK,run_id)
         print("IG_LAB_RESULT " + json.dumps(report, separators=(",", ":")), flush=True)
     return 0 if report["status"] == "passed" else 1
 

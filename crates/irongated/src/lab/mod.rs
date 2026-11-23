@@ -5,6 +5,7 @@ mod dhcp;
 mod io;
 mod owner;
 mod packet;
+mod portal;
 mod profile;
 mod state;
 mod transport;

@@ -1,6 +1,6 @@
 # IronGate roadmap
 
-The workspace provides offline `ig config check`, an initial read-only `ig doctor`, an offline borrowed DHCP request/reply protocol pilot, bounded lease ownership, and offline consent/admission with retained policy effects. The [guest-only Linux lab](linux-packet-lab.md) now adds real DHCP/ARP, native local TCP and admission-gated routed transit with logout/expiry/crash evidence. Normal deployment, portal/RADIUS services and broader host preflight remain unimplemented. Checklist completion requires implementation evidence and the acceptance criteria below.
+The workspace provides offline `ig config check`, an initial read-only `ig doctor`, an offline borrowed DHCP request/reply protocol pilot, bounded lease ownership, and offline consent/admission with retained policy effects. The [guest-only Linux lab](linux-packet-lab.md) now adds real DHCP/ARP, native local TCP and admission-gated routed transit with logout/expiry/crash evidence. A [native local consent portal](local-consent-portal.md) is now implemented in that lab. Normal deployment, RADIUS services and broader host preflight remain unimplemented. Checklist completion requires implementation evidence and the acceptance criteria below.
 
 The immediate product goal is a working captive portal demonstration, followed by RADIUS-backed login and accounting through the same session engine. Both flows, plus two distinct VLAN profiles, are required for the lab MVP. The [backward-planned MVP implementation plan](mvp-plan.md) defines scope, dependencies, acceptance gates, branches and effort assumptions. It takes priority over expanding isolated parser features or microbenchmarks.
 
@@ -35,7 +35,8 @@ The immediate product goal is a working captive portal demonstration, followed b
 - [x] Implement bounded offline lease ownership, direct-client DORA/renew/release/decline/expiry, ACK/NAK wire fixtures and measured lifecycle allocation totals.
 - [x] Implement independent offline consent/session admission, generation-safe attempts, policy acknowledgements, retained cleanup and measured churn allocation totals; lease ownership alone does not authorize transit.
 - [x] Apply a real userspace policy cell in the isolated one-client Linux lab; verify DHCP/ARP, native local TCP, bidirectional transit, logout/expiry and persistent crash guarding.
-- [ ] Qualify the lab backend under the agreed load/profile and implement the real consent portal/provider boundary; current consent is a root-only test command.
+- [x] Implement the native local consent boundary with browser/API actions and bounded records in the isolated lab.
+- [ ] Qualify the backend under the agreed load/profile and wire normal deployment.
 - [ ] Qualify the pilot with differential decoding, coverage-guided fuzzing and isolated VM interoperability.
 
 The [burndown checkpoint](burndown.md) separates implemented foundations and current evidence from the remaining portal/RADIUS/qualification gates. The [acceptance contract](lab-acceptance.md) freezes target numbers without claiming the one-client lab satisfies the larger scale profile.

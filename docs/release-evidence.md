@@ -35,6 +35,12 @@ The accompanying checkpoint passed 122 Rust tests, 16 comparison-framework regre
 
 The checkpoint has 124 passing Rust tests, 16 framework and 14 lab-contract regressions. Shared owner turns and descriptor validation have 100% ordinary-test line coverage. CRAP now analyzes 216 functions and flags only the existing CLI parser at 39.32; the earlier startup threshold finding is resolved, while guest bootstrap/serving coverage remains incomplete. See the [burndown](burndown.md) for product gates still pending.
 
+## Local consent checkpoint
+
+The [native consent lab](local-consent-portal.md) adds real browser form submission, typed owner requests, one-use scoped actions and a bounded local record writer. Its current development quality checkpoint passes **135 Rust tests**, **16 comparison regressions** and **17 host-only lab/portal evidence tests**. CRAP analyzes **251 functions**, with only the preexisting CLI parser above 30 at **39.32**. HTTP worker startup is still uncovered by ordinary unit-test LCOV (score 30); live guest scenarios are independent functional evidence and are not merged into coverage.
+
+Schema-3 `local-consent-v1` reports require six portal cases plus all eleven packet/isolation cases. Browser namespace, rejection statuses, the ordered 16-record durable prefix and screenshot identities/digests must agree before the host accepts a run. Failed runs stay retained. The first complete development browser run is `67dffaba03ee6841751fe1591106d181` (dirty source); retain clean-commit reruns separately. All 17 scenarios passed, establishing Gate A for the fixed lab. This does not qualify RADIUS accounting, normal deployment or scale targets. Record synchronization promises only acknowledged rows, not crash-complete billing.
+
 ## Release bundle contract
 
 Before publishing a release candidate, retain the following together:

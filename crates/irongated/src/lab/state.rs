@@ -26,6 +26,8 @@ pub struct State<'a> {
     pub active: Option<session::Handle>,
     pub applied: Option<(session::Handle, lease::Handle, u64)>,
     pub counters: Counters,
+    pub tokens: super::portal::Tokens,
+    pub journal: super::portal::Journal,
 }
 
 impl<'a> State<'a> {
@@ -40,10 +42,13 @@ impl<'a> State<'a> {
             active: None,
             applied: None,
             counters: Counters::default(),
+            tokens: Default::default(),
+            journal: Default::default(),
         }
     }
 
     pub fn advance(&mut self, now: u64) -> Result<(), String> {
+        self.tokens.expire(now);
         let mut events = [None; 1];
         let count = self
             .leases
@@ -73,10 +78,24 @@ impl<'a> State<'a> {
             };
             match effect.kind {
                 session::EffectKind::Apply { until } => {
+                    self.tokens.invalidate();
                     self.applied = Some((effect.token.session(), effect.lease, until));
                     self.counters.applies = self.counters.applies.saturating_add(1);
                 }
-                session::EffectKind::Remove { .. } => {
+                session::EffectKind::Remove { reason } => {
+                    self.tokens.invalidate();
+                    let kind = match reason {
+                        session::EndReason::AuthorizationExpired
+                        | session::EndReason::ConsentExpired => {
+                            super::portal::journal::Kind::Expired
+                        }
+                        session::EndReason::LeaseLost | session::EndReason::LeaseExpired => {
+                            super::portal::journal::Kind::LeaseLost
+                        }
+                        _ => super::portal::journal::Kind::Revoked,
+                    };
+                    self.journal
+                        .stop(self.sessions.now(), self.counters.forwarded_ip_bytes, kind);
                     if self.applied.is_some_and(|(handle, lease, _)| {
                         handle == effect.token.session() && lease == effect.lease
                     }) {
@@ -110,6 +129,7 @@ impl<'a> State<'a> {
             if view.lease == lease {
                 return Some(());
             }
+            self.tokens.invalidate();
             self.sessions.lease_lost(view.lease);
             self.pump().ok()?;
             self.sessions.forget(old).ok()?;

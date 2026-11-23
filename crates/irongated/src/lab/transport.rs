@@ -15,6 +15,7 @@ pub(super) struct Transport {
     pub down: File,
     pub up: File,
     pub control: UnixDatagram,
+    pub portal: Option<super::portal::Bridge>,
 }
 
 impl Transport {
@@ -35,7 +36,12 @@ impl Transport {
             }
         }
         control.set_nonblocking(true)?;
-        Ok(Self { down, up, control })
+        Ok(Self {
+            down,
+            up,
+            control,
+            portal: None,
+        })
     }
 
     pub fn wait(&self) -> io::Result<()> {
@@ -43,6 +49,13 @@ impl Transport {
             PollFd::new(&self.down, PollFlags::IN),
             PollFd::new(&self.up, PollFlags::IN),
             PollFd::new(&self.control, PollFlags::IN),
+            PollFd::new(
+                self.portal
+                    .as_ref()
+                    .map(|p| &p.wake)
+                    .unwrap_or(&self.control),
+                PollFlags::IN,
+            ),
         ];
         let timeout = Timespec {
             tv_sec: 0,

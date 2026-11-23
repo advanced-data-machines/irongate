@@ -6,7 +6,7 @@ IronGate currently provides offline TOML validation through `ig config check` an
 
 The [MVP plan](docs/mvp-plan.md) works backward from a real captive portal demo: local consent first, then HTTPS login with external RADIUS authentication/accounting, followed by two per-VLAN portal profiles. Live testing will stay in a disposable VM. The [roadmap](docs/roadmap.md) distinguishes that lab MVP from production qualification.
 
-Portal configuration explicitly distinguishes [local on-device and external/cloud hosting](docs/portal-hosting.md), including tenant-scoped metadata and per-VLAN placement. See [the cloud example](examples/cloud-portal.toml) and [the proposed isolated VM](docs/vm-demo.md). These are validated configuration contracts; portal services remain unimplemented.
+Portal configuration explicitly distinguishes [local on-device and external/cloud hosting](docs/portal-hosting.md), including tenant-scoped metadata and per-VLAN placement. See [the cloud example](examples/cloud-portal.toml) and [the proposed isolated VM](docs/vm-demo.md). These are validated configuration contracts; the [local consent portal](docs/local-consent-portal.md) now runs in the isolated lab. External hosting remains unimplemented.
 
 ## Try the CLI
 
@@ -47,7 +47,7 @@ just ig config check --config examples/standalone.toml --json
 | `irongate-cli` | Operator command `ig` | `config check`, passive `doctor`, text/JSON results, help and version |
 | `irongated` | Host process, configuration, adapters, and event loop | Normal mode prints scaffold status; guarded Linux lab mode handles DHCP/ARP and admission-gated transit in QEMU |
 
-Use Rust 1.100 or newer with edition 2024 support. Validation used Rust 1.100.0, matching the declared minimum. This baseline permits evaluation of the stable allocator API; no custom allocator is currently used. Four direct third-party crates support configuration/address parsing and JSON output; the Linux lab adds narrowly enabled `rustix` polling; see the [dependency policy](docs/dependencies.md). The core and protocol libraries have no third-party or runtime dependencies; protocol examples/tests use the workspace core as a development dependency. Offline builds require dependencies to have been cached already.
+Use Rust 1.100 or newer with edition 2024 support. Validation used Rust 1.100.0, matching the declared minimum. This baseline permits evaluation of the stable allocator API; no custom allocator is currently used. Four direct third-party crates support configuration/address parsing and JSON output; the Linux lab adds narrowly enabled `rustix` polling/randomness and `httparse` request parsing; see the [dependency policy](docs/dependencies.md). The core and protocol libraries have no third-party or runtime dependencies; protocol examples/tests use the workspace core as a development dependency. Offline builds require dependencies to have been cached already.
 
 ```sh
 cargo build --workspace --offline
@@ -58,7 +58,7 @@ cargo test --workspace --offline
 cargo doc --workspace --no-deps --offline
 ```
 
-Tests cover the example profiles, conflicting VLANs/subnets, provider references, resource limits, malformed input, redaction and actual CLI output/exit codes. The guest-only lab now exercises live forwarding and the admission owner; normal deployment, portal services and RADIUS integration remain unimplemented. A successful configuration check establishes internal consistency for the supported profile, not gateway correctness or measured capacity.
+Tests cover the example profiles, conflicting VLANs/subnets, provider references, resource limits, malformed input, redaction and actual CLI output/exit codes. The guest-only lab now exercises live forwarding and the admission owner; normal deployment and RADIUS integration remain unimplemented. A successful configuration check establishes internal consistency for the supported profile, not gateway correctness or measured capacity.
 
 Doctor tests use private filesystem fixtures for link evidence, shared trunks, scope selection and incomplete observations. Keep `lib.rs` and `main.rs` as short entry points; put related behavior in focused, readable modules.
 
@@ -66,7 +66,7 @@ The [offline protocol pilot](docs/protocol-pilot.md) parses borrowed direct-clie
 
 The [offline lease foundation](docs/lease-core.md) adds bounded ownership, generation-safe reuse, renewal, release, decline/quarantine, expiry and ACK/NAK replies. `just lease-demo` runs a complete synthetic exchange with no networking; `just lease-allocations` checks 100000 full lifecycle replays with Valgrind. A lease does not authorize upstream traffic. The pilot supports at most 256 addresses per pool; daemon/config integration and real-client interoperability remain future work.
 
-The [offline session foundation](docs/session-core.md) adds local consent attempts, explicit policy acknowledgements, expiry/revocation and retained cleanup. Run `just session-demo` to see admission remain denied until application is confirmed, or `just session-allocations` for the churn allocation check. The worker is simulated: real traffic enforcement and a portal service are still pending.
+The [offline session foundation](docs/session-core.md) adds local consent attempts, explicit policy acknowledgements, expiry/revocation and retained cleanup. Run `just session-demo` to see admission remain denied until application is confirmed, or `just session-allocations` for the churn allocation check. The worker is simulated: the Linux lab now connects this owner to real traffic enforcement and a local consent portal.
 
 The [Linux packet lab](docs/linux-packet-lab.md) now boots a fresh NIC-free QEMU overlay and verifies real client DHCP/ARP, native local TCP, bidirectional consent-gated transit, logout, expiry and crash guarding. Use `just vm-lab-command` to inspect the command, `just vm-lab-prepare` for the separate guest package image, and `just vm-lab-test` for the automated scenario. Guest artifacts travel on a read-only seed disk; no host directory/network is shared. This is a fixed one-client lab profile with root-only test consent, not a production gateway or portal.
 

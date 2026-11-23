@@ -79,6 +79,9 @@ def run(children, report):
     require(not fresh(children), "Upstream reachable without consent")
     require(control("status")["counters"]["denied"] > 0, "No userspace policy drop recorded")
     cases.append({"name": "unauthorized_transit_denied", "passed": True})
+    if report.get("portal"):
+        import portal_scenarios
+        portal_scenarios.run(children,report)
     require(control("consent")["allowed"], "Policy application did not authorize")
     require(fresh(children), "Fresh admitted upstream TCP failed")
     live = Probe(children)

@@ -8,15 +8,21 @@ CASES = frozenset({
     "ipv6_kernel_guard_after_crash",
 })
 
+PORTAL_CASES=frozenset({"browser_consent_and_logout","portal_one_use_origin_and_action_rejection",
+    "portal_expired_and_stale_generation_actions","portal_expiry_blocks_existing_and_new_tcp",
+    "portal_slow_client_does_not_block_control","portal_record_pressure_preserves_logout"})
 
-def validate(guest, run_id):
-    if (guest.get("schema") != 2 or guest.get("suite") != "untagged-acceptance-v1" or guest.get("scope") != "isolated_packet_lab"
+
+def validate(guest, run_id,portal=False):
+    schema,suite=(3,"local-consent-v1")if portal else(2,"untagged-acceptance-v1")
+    expected=CASES|PORTAL_CASES if portal else CASES
+    if (guest.get("schema") != schema or guest.get("suite") != suite or guest.get("scope") != "isolated_packet_lab"
             or guest.get("run_id") != run_id or guest.get("status") != "passed"):
         raise ValueError("Guest result identity/status does not match this run")
     cases = guest.get("cases", [])
-    if (not isinstance(cases, list) or len(cases) != len(CASES)
+    if (not isinstance(cases, list) or len(cases) != len(expected)
             or any(not isinstance(case, dict) or case.get("passed") is not True for case in cases)
-            or {case.get("name") for case in cases} != CASES):
+            or {case.get("name") for case in cases} != expected):
         raise ValueError("Missing, duplicate, unknown or failed scenario")
     if guest.get("cleanup_errors") != [] or guest.get("management_interfaces") != ["lo"]:
         raise ValueError("Cleanup failed or management networking is not NIC-free")
@@ -42,3 +48,21 @@ def validate(guest, run_id):
     if (ipv6.get("kernel_forwarding") != 1 or ipv6.get("forward_drop_delta", 0) < 1
             or ipv6.get("ingress_received", 0) < 1 or ipv6.get("upstream_received") != 0):
         raise ValueError("IPv6 kernel bypass guard was not independently exercised")
+    if portal:validate_portal(guest,run_id,namespaces)
+
+
+def validate_portal(guest,run_id,namespaces):
+    browser=guest.get("browser",{})
+    if (browser.get("namespace")!=namespaces["iglab-client"] or browser.get("transport")!="devtools_pipe"
+            or not browser.get("product")):
+        raise ValueError("Browser did not run in the subscriber namespace")
+    records=guest.get("local_records",{})
+    rows=records.get("rows",[])
+    if records.get("retained")!=16 or records.get("durable")!=16 or records.get("capacity")!=16:
+        raise ValueError("Missing bounded/durable journal evidence")
+    if ([r.get("id")for r in rows]!=list(range(1,17))
+            or any(r.get("run_id")!=run_id or r.get("network")!=1 for r in rows)
+            or sum(r.get("kind")=="Granted"for r in rows)!=4 or rows[-1].get("kind")!="Revoked"):
+        raise ValueError("Portal journal prefix/scope does not match admissions")
+    statuses={"replay":409,"origin":403,"wrong_action":409,"network_field":400,"expired":409,"stale_generation":409,"capacity":503}
+    if guest.get("portal_http")!=statuses:raise ValueError("Portal rejection evidence is incomplete")
