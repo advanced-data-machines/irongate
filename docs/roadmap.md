@@ -116,3 +116,5 @@ Include [standalone/provider health tests](authentication-radius.md), [fleet/bac
 Compare captures and effects with CoovaChilli while normalizing timestamps, identifiers and challenges. Preserve correct deployment behavior, and explicitly record intentional fixes to malformed-input handling. Measure packets/second, CPU, latency percentiles, drops, session setup rate, memory per session, pool occupancy and allocator calls. Numeric release thresholds depend on the baseline and target capacity.
 
 Keep captured credentials and subscriber identifiers out of source control. The initial rollback path is a maintenance restart with reauthentication; persistent session import and live handoff require separate design and testing.
+
+The next implementation sequence is the [HTTPS/RADIUS checkpoint plan](https-radius-plan.md), including the proposed Linux/static-musl compatibility matrix. Gate A and acceptance changes are integrated into `release/0.1.x` through `5695c36`; broader deployment and scale support remain unqualified.
