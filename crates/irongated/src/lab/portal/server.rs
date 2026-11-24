@@ -3,94 +3,31 @@ use super::{
     bridge::{Envelope, Reply, WorkerBridge},
     page,
     protocol::{self, Parsed},
-    writer,
 };
 use rustix::rand::{GetRandomFlags, getrandom};
 use std::{
-    io::{self, Read, Write},
-    net::{Ipv4Addr, TcpListener, TcpStream},
-    sync::{
-        Arc, Mutex,
-        mpsc::{self, SyncSender},
-    },
-    thread,
+    io::{self, Read},
+    net::Ipv4Addr,
+    sync::mpsc::{self, SyncSender},
     time::{Duration, Instant},
 };
 
 pub(crate) fn start(bridge: WorkerBridge, run_id: &str) -> io::Result<()> {
-    let file = writer::open()?;
-    let listener = TcpListener::bind("10.50.10.1:8080")?;
-    let (connections, receiver) = mpsc::sync_channel::<TcpStream>(4);
-    let receiver = Arc::new(Mutex::new(receiver));
-    for _ in 0..2 {
-        let receiver = Arc::clone(&receiver);
-        let sender = bridge.sender.clone();
-        let notify = bridge.wake.try_clone()?;
-        thread::spawn(move || {
-            loop {
-                let connection = {
-                    let Ok(guard) = receiver.lock() else {
-                        return;
-                    };
-                    guard.recv()
-                };
-                let Ok(mut stream) = connection else {
-                    return;
-                };
-                let peer = match stream.peer_addr() {
-                    Ok(std::net::SocketAddr::V4(peer)) => *peer.ip(),
-                    _ => continue,
-                };
-                if stream
-                    .set_read_timeout(Some(Duration::from_millis(200)))
-                    .is_err()
-                    || stream
-                        .set_write_timeout(Some(Duration::from_millis(200)))
-                        .is_err()
-                {
-                    continue;
-                }
-                let _ = handle(&mut stream, peer, &sender, || {
-                    let _ = notify.send(&[1]);
-                });
-            }
-        });
-    }
-    thread::spawn(move || {
-        for stream in listener.incoming() {
-            let Ok(mut stream) = stream else {
-                break;
-            };
-            if let Err(mpsc::TrySendError::Full(returned)) = connections.try_send(stream) {
-                stream = returned;
-                let _ = stream.set_write_timeout(Some(Duration::from_millis(50)));
-                let _ = stream.write_all(&page::response(
-                    Reply::Error(503, "Portal is busy. Please retry."),
-                    false,
-                ));
-            }
-        }
-    });
-    let run_id = run_id.to_owned();
-    thread::spawn(move || {
-        writer::run(
-            file,
-            bridge.records,
-            bridge.record_acks,
-            bridge.wake,
-            run_id,
-        )
-    });
-    Ok(())
+    let settings = super::config::Settings::load(std::path::Path::new(
+        "/run/irongate-packet-lab/portal.toml",
+    ))?;
+    super::workers::start(bridge, run_id, settings)
 }
 
 pub(super) fn handle(
-    stream: &mut (impl Read + Write),
+    stream: &mut impl super::transport::RequestStream,
     peer: Ipv4Addr,
     sender: &SyncSender<Envelope>,
     notify: impl FnOnce(),
+    endpoint: &super::config::Endpoint,
+    metrics: &super::metrics::Metrics,
 ) -> io::Result<()> {
-    let result = read_request(stream).and_then(|(request, html)| {
+    let result = read_request(stream, endpoint).and_then(|(request, html)| {
         let (reply, receiver) = mpsc::sync_channel(1);
         sender
             .try_send(Envelope {
@@ -105,21 +42,29 @@ pub(super) fn handle(
             .map(|reply| (reply, html))
             .map_err(|_| 503u16)
     });
-    let (reply, html) = result.unwrap_or_else(|code| {
+    let (mut reply, html) = result.unwrap_or_else(|code| {
         (
             Reply::Error(code, "Request could not be completed. Reload the portal."),
             false,
         )
     });
-    stream.write_all(&page::response(reply, html))
+    if let Reply::View(view) = &mut reply {
+        view.transport = Some(metrics.snapshot(endpoint.secure));
+    }
+    stream.begin_response();
+    stream.write_all(&page::response(reply, html))?;
+    stream.flush()
 }
-fn read_request(stream: &mut impl Read) -> Result<(super::bridge::Request, bool), u16> {
+fn read_request(
+    stream: &mut impl Read,
+    endpoint: &super::config::Endpoint,
+) -> Result<(super::bridge::Request, bool), u16> {
     let entropy = entropy().map_err(|_| 503u16)?;
     let start = Instant::now();
     let mut input = [0; protocol::MAX_REQUEST];
     let mut used = 0;
     loop {
-        match protocol::parse(&input[..used], entropy)? {
+        match protocol::parse(&input[..used], entropy, endpoint)? {
             Parsed::Ready { request, html } => return Ok((request, html)),
             Parsed::Incomplete => (),
         }

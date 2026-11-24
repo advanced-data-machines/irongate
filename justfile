@@ -110,3 +110,12 @@ brochure:
 [positional-arguments]
 ig *args:
     cargo run --quiet -p irongate-cli -- "$@"
+
+# Prepare guest-only OpenSSL/NSS certificate tooling in a separate image.
+vm-https-prepare:
+    python3 -m tools.vm.lab.prepare_portal --https
+
+# Run HTTPS consent and TLS failure checks in a fresh NIC-free guest.
+vm-https-test:
+    cargo build -p irongated --release --target x86_64-unknown-linux-musl --offline
+    python3 -m tools.vm.lab.run --https

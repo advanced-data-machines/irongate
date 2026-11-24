@@ -2,14 +2,17 @@
 
 use super::{bridge::Request, tokens::Action};
 pub(super) const MAX_REQUEST: usize = 8192;
-pub(super) const ORIGIN: &str = "http://10.50.10.1:8080";
 
 pub(super) enum Parsed {
     Incomplete,
     Ready { request: Request, html: bool },
 }
 
-pub(super) fn parse(bytes: &[u8], entropy: [u8; 32]) -> Result<Parsed, u16> {
+pub(super) fn parse(
+    bytes: &[u8],
+    entropy: [u8; 32],
+    endpoint: &super::config::Endpoint,
+) -> Result<Parsed, u16> {
     if bytes.len() > MAX_REQUEST {
         return Err(413);
     }
@@ -27,7 +30,7 @@ pub(super) fn parse(bytes: &[u8], entropy: [u8; 32]) -> Result<Parsed, u16> {
         origin,
         content_length,
         content_type,
-    } = super::headers::check(parsed.headers)?;
+    } = super::headers::check(parsed.headers, &endpoint.authority)?;
     let body_len = content_length.unwrap_or(0);
     if body_len > 128 {
         return Err(413);
@@ -53,7 +56,9 @@ pub(super) fn parse(bytes: &[u8], entropy: [u8; 32]) -> Result<Parsed, u16> {
             html: false,
         }),
         (Some("POST"), Some(path @ ("/consent" | "/logout"))) => {
-            if origin != Some(ORIGIN) || content_type != Some("application/x-www-form-urlencoded") {
+            if origin != Some(endpoint.origin.as_str())
+                || content_type != Some("application/x-www-form-urlencoded")
+            {
                 return Err(403);
             }
             let body = &bytes[length..];

@@ -41,6 +41,12 @@ The [native consent lab](local-consent-portal.md) adds real browser form submiss
 
 Schema-3 `local-consent-v1` reports require six portal cases plus all eleven packet/isolation cases. Browser namespace, rejection statuses, the ordered 16-record durable prefix and screenshot identities/digests must agree before the host accepts a run. Failed runs stay retained. The first complete development browser run is `67dffaba03ee6841751fe1591106d181` (dirty source); retain clean-commit reruns separately. All 17 scenarios passed, establishing Gate A for the fixed lab. This does not qualify RADIUS accounting, normal deployment or scale targets. Record synchronization promises only acknowledged rows, not crash-complete billing.
 
+## HTTPS consent checkpoint
+
+The [HTTPS consent feature](portal-https.md) adds explicit TLS configuration, bounded transport workers and scheme-specific Host/Origin checks while preserving static musl artifacts. Its development checks pass 139 Rust tests and 35 Python regressions. CRAP analyzes 279 functions, with only the preexisting CLI parser above 30 at 39.32; worker startup still has incomplete ordinary-test coverage. Live execution is not merged into LCOV.
+
+The version-4 `local-https-v1` suite requires all 17 prior portal/packet cases plus independent browser/Python certificate rejection and TLS deadline/queue/malformed-record pressure evidence. Initial development run `bdc380b045883d2fd67d5f7d4435e4e7` established verified browser TLS and two occupied-worker deadlines, before the final queue-overflow checks were added; it is dirty development evidence. Retain final clean-commit runs separately with the full contract, three verified screenshots, quality identity, dependency graph, static ABI checks and exact footprint/memory observations. Production certificate automation, RADIUS and scale qualification remain pending.
+
 ## Release bundle contract
 
 Before publishing a release candidate, retain the following together:

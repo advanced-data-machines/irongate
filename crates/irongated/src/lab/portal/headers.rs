@@ -7,7 +7,10 @@ pub(super) struct Headers<'a> {
     pub content_type: Option<&'a str>,
 }
 
-pub(super) fn check<'a>(headers: &[httparse::Header<'a>]) -> Result<Headers<'a>, u16> {
+pub(super) fn check<'a>(
+    headers: &[httparse::Header<'a>],
+    authority: &str,
+) -> Result<Headers<'a>, u16> {
     let mut accept_html = false;
     let mut host = None;
     let mut origin = None;
@@ -43,7 +46,7 @@ pub(super) fn check<'a>(headers: &[httparse::Header<'a>]) -> Result<Headers<'a>,
             return Err(400);
         }
     }
-    if host != Some("10.50.10.1:8080") {
+    if host != Some(authority) {
         return Err(403);
     }
     Ok(Headers {

@@ -8,18 +8,19 @@ import signal
 import subprocess
 import time
 from guest_common import CLIENT,WORK,guard,spawn
+import portal_config
 
 
 class Browser:
-    def __init__(self,children):
+    def __init__(self,children,label="portal"):
         guard((WORK/"id").read_text().strip())
-        incoming,outgoing=WORK/"cdp-input",WORK/"cdp-output"
+        incoming,outgoing=WORK/f"cdp-input-{label}",WORK/f"cdp-output-{label}"
         for path in (incoming,outgoing):os.mkfifo(path,0o600)
-        self.log=(WORK/"browser.log").open("w")
+        self.log=(WORK/f"browser-{label}.log").open("w")
         self.proc=spawn("bash","-c",'exec 3<"$1" 4>"$2"; shift 2; exec chromium "$@"',"ig-browser",str(incoming),str(outgoing),
             "--headless","--no-sandbox","--disable-gpu","--disable-dev-shm-usage","--no-proxy-server",
             "--disable-background-networking","--no-first-run","--disable-default-apps","--disable-sync",
-            "--remote-debugging-pipe",f"--user-data-dir={WORK/'chromium'}","--window-size=900,820","about:blank",
+            "--remote-debugging-pipe",f"--user-data-dir={WORK/('chromium-'+label)}","--window-size=900,820","about:blank",
             namespace=CLIENT,stdin=subprocess.DEVNULL,stdout=self.log,stderr=self.log,start_new_session=True)
         children.append(self.proc)
         deadline=time.monotonic()+5
@@ -67,7 +68,7 @@ class Browser:
 
     def navigate(self):
         self.evaluate("window.__igNavigationPending=true;true")
-        self.call("Page.navigate",{"url":"http://10.50.10.1:8080/"})
+        self.call("Page.navigate",{"url":portal_config.origin()+"/"})
         self.wait("!window.__igNavigationPending && document.readyState==='complete' && !!document.querySelector('form')")
 
     def wait(self,expression,seconds=5):

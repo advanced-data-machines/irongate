@@ -9,6 +9,7 @@ use serde_json::{Value, json};
 
 pub(super) fn status(view: Snapshot) -> Value {
     json!({"scope":"local_lab_consent","hosting":"local","provider":"consent","network":1,
+        "transport":view.transport.map(|h|json!({"scheme":if h.secure{"https"}else{"http"},"tls_handshakes":h.completed,"tls_failures":h.failed,"tls_timeouts":h.timed_out,"accepted":h.accepted,"queue_rejections":h.busy})),
         "phase":view.phase,"now":view.now,"allowed":view.allowed,"generation":view.generation,"until":view.until,
         "forwarded_ip_bytes":view.ip_bytes,"admission_available":view.admission_available,
         "records":{"retained":view.records,"durable":view.durable,"pending":view.records-view.durable,

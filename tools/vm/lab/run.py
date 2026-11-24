@@ -19,12 +19,14 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--print", action="store_true", help="Print the planned NIC-free QEMU command without changes")
     parser.add_argument("--portal",action="store_true",help="Use the guest browser image and consent walkthrough")
+    parser.add_argument("--https",action="store_true",help="Verified HTTPS consent and TLS failure suite")
     args = parser.parse_args()
+    if args.https:args.portal=True
     if args.print:
         print(shlex.join(qemu(LAB / "runs/NEW_RUN")))
         return
     tools()
-    prepared = json.loads((LAB / ("portal-prepared.json"if args.portal else"prepared.json")).read_text())
+    prepared = json.loads((LAB / ("https-prepared.json"if args.https else"portal-prepared.json"if args.portal else"prepared.json")).read_text())
     if digest(prepared["image"]) != prepared["sha256"]:
         raise RuntimeError("Prepared backing image digest mismatch")
     metadata = json.loads(subprocess.check_output(["cargo", "metadata", "--no-deps", "--format-version=1", "--offline"], cwd=ROOT))
@@ -44,21 +46,22 @@ def main():
               "rustc": subprocess.check_output(["rustc", "--version"], text=True).strip(),
               "qemu": subprocess.check_output(["qemu-system-x86_64", "--version"], text=True).splitlines()[0]}
     if args.portal:report.update({"schema":3,"suite":"local-consent-v1"})
+    if args.https:report.update({"schema":4,"suite":"local-https-v1"})
     report_path.write_text(json.dumps(report, indent=2) + "\n")
     try:
         shutil.copy2(binary, directory / "payload/irongated")
         report["binary_sha256"] = digest(binary)
-        for name in ("guest.py", "guest_common.py", "topology.py", "scenarios.py", "supervisor.py", "client_lease.py", "services.py", "probe.py", "security.py", "capture.py", "inject.py","browser.py","api_client.py","portal_scenarios.py","artifacts.py"):
+        for name in ("guest.py", "guest_common.py", "topology.py", "scenarios.py", "supervisor.py", "client_lease.py", "services.py", "probe.py", "security.py", "capture.py", "inject.py","browser.py","api_client.py","portal_scenarios.py","artifacts.py","portal_config.py","certificates.py","tls_scenarios.py","tls_probe.py","tls_fixture.py"):
             shutil.copy2(SOURCE / name, directory / "payload" / name)
         (directory / "payload/client_lease.py").chmod(0o755)
         report["harness_sha256"] = {p.name: digest(p) for p in (directory / "payload").iterdir()}
         overlay(prepared["image"], directory / "disk.qcow2")
-        seed(directory, run_id, "portal"if args.portal else"test")
+        seed(directory, run_id, "https"if args.https else"portal"if args.portal else"test")
         print(f"Booting NIC-free packet lab; retained evidence: {directory}", flush=True)
         boot(directory)
         guest = result(directory, "IG_LAB_RESULT ")
         report["guest"] = guest
-        validate(guest, run_id,portal=args.portal)
+        validate(guest, run_id,portal=args.portal,https=args.https)
         if args.portal:extract(directory,run_id,guest.get("screenshots",{}))
         report["status"] = "passed"
     except Exception as error:

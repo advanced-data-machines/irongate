@@ -1,20 +1,21 @@
 """Extend the separate lab image with a guest-only headless Chromium browser."""
 
 import json
+import argparse
 from .host import LAB,boot,digest,new_run,now,overlay,result,seed,tools
 
 
-def main():
+def main(https=False):
     tools()
-    manifest=LAB/"portal-prepared.json"
+    manifest=LAB/("https-prepared.json"if https else"portal-prepared.json")
     if manifest.exists():
         data=json.loads(manifest.read_text())
         if digest(data["image"])!=data["sha256"]:raise RuntimeError("Portal image digest mismatch")
         print("Verified existing guest browser image")
         return
-    parent=json.loads((LAB/"prepared.json").read_text())
+    parent=json.loads((LAB/("portal-prepared.json"if https else"prepared.json")).read_text())
     if digest(parent["image"])!=parent["sha256"]:raise RuntimeError("Parent image digest mismatch")
-    directory,run_id=new_run(LAB,"portal-prepare-")
+    directory,run_id=new_run(LAB,"https-prepare-"if https else"portal-prepare-")
     overlay(parent["image"],directory/"disk.qcow2")
     script='''#!/bin/bash
 set -euo pipefail
@@ -28,6 +29,8 @@ packages=subprocess.check_output(['dpkg-query','-W','-f=${Package}=${Version}\\n
 print('IG_PROVISION_RESULT '+json.dumps({'status':'prepared','run_id':pathlib.Path('/run/irongate-packet-lab/id').read_text().strip(),'packages':packages}),flush=True)
 PY
 '''
+    if https:
+        script=script.replace("install chromium","install chromium openssl libnss3-tools").replace("'chromium'],text=True)","'chromium','openssl','libnss3-tools'],text=True)")
     (directory/"payload/provision.sh").write_text(script)
     seed(directory,run_id,"prepare")
     print(f"Preparing Chromium inside the separate QEMU guest; log: {directory/'serial.log'}",flush=True)
@@ -40,4 +43,7 @@ PY
     print("Prepared immutable guest browser image; test boots still use -nic none")
 
 
-if __name__=="__main__":main()
+if __name__=="__main__":
+    parser=argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--https",action="store_true")
+    main(parser.parse_args().https)

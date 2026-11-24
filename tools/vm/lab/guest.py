@@ -12,6 +12,7 @@ from guest_common import WORK, GATEWAY, UPSTREAM, command, guard, spawn
 import scenarios
 import topology
 import artifacts
+import portal_config
 
 
 def main(run_id):
@@ -20,9 +21,11 @@ def main(run_id):
     report = {"schema": 2, "suite": "untagged-acceptance-v1", "scope": "isolated_packet_lab", "run_id": run_id,
               "status": "in_progress", "cases": [], "kernel": platform.release()}
     logs = []
-    if (WORK/"mode").read_text().strip()=="portal":
+    if (WORK/"mode").read_text().strip()in ("portal","https"):
         report.update({"schema":3,"suite":"local-consent-v1","portal":True})
+    if portal_config.secure():report.update({"schema":4,"suite":"local-https-v1","https":True})
     try:
+        portal_config.configure(run_id)
         interfaces = json.loads(command("ip", "-j", "link").stdout)
         if {item["ifname"] for item in interfaces} != {"lo"}:
             raise RuntimeError("Demo requires -nic none and loopback-only management")
@@ -31,7 +34,7 @@ def main(run_id):
         report["vcpus"] = os.cpu_count()
         report["packages"] = command("dpkg-query", "-W", "-f=${Package}=${Version}\n",
                                      "iproute2", "nftables", "busybox", "ethtool", "python3").stdout.splitlines()
-        report["topology"] = topology.prepare(created)
+        report["topology"] = topology.prepare(created,portal_config.port(),portal_config.secure())
         for namespace, host, port in [(UPSTREAM, "192.0.2.80", "80")]:
             log = (WORK / f"service-{port}.log").open("w")
             logs.append(log)

@@ -1,15 +1,22 @@
-# Session handoff: resume with HTTPS consent
+# Session handoff: HTTPS consent checkpoint
 
-Saved after the November 22, 2026 session (America/Denver). The user asked to stop here and resume next session. Do not begin the next feature as part of saving this handoff.
+The HTTPS consent checkpoint now lives on `feature/portal-https`, branched from release commit `438a1d2`. This handoff supersedes the earlier instructions to create that branch. Check actual Git status/history before resuming; the feature is separate from `release/0.1.x` until explicitly integrated.
 
-## Repository and branch state
+## Current checkpoint and next action
 
-- Workspace: `/home/sbeskur/repos/public/irongate`.
-- Current branch: `release/0.1.x`.
-- Starting checkpoint for this handoff: `4812532` (`docs: plan HTTPS and RADIUS checkpoints after Gate A`). The handoff itself is a subsequent documentation commit.
-- All existing completed feature branches are ancestors of release: lease, session, Linux packet lab, expanded acceptance and local consent portal. Acceptance and portal work were fast-forwarded, preserving history. Feature branches were retained.
-- Latest runtime/harness commit: `5695c36`; portal implementation: `0f665e1`; preceding evidence fixes: `2ed700d` and `5695c36`.
-- No push, tag, deployment, branch deletion or new HTTPS branch was performed in this session. Check actual Git status/remotes before taking further actions.
+- HTTPS consent is implemented with rustls 0.23.46, defaults disabled and one ring provider; both daemon and CLI have verified static-musl builds.
+- Explicit lab TOML selects HTTPS/8443 or the legacy HTTP/8080 fixture, with no downgrade fallback. TLS 1.3 only; bounded workers/queues, phase deadlines and service counters remain outside the packet owner.
+- Each HTTPS VM generates fresh test PKI and trusts one CA through Chromium's managed `CACertificates` policy inside that guest. No host trust/network changes. Expired, wrong-name and untrusted certificates must fail in both browser and Python.
+- Current ordinary checks: 139 Rust tests, 19 host lab/TLS tests, 16 comparison regressions; CRAP 279 functions, only the old CLI parser above 30 at 39.32. Anonymous Unix-socket TLS tests may require sandbox escalation to set timeouts; they bind no host listener.
+- HTTPS reports use schema 4 / `local-https-v1`, with 19 required cases, queue-overflow/deadline/malformed-record evidence and three browser screenshots. The HTTP fixture remains schema 3 with 17 cases.
+- Review/integrate this feature, then branch `feature/provider-boundary` from release. Do not add RADIUS directly to the TLS branch. Continue with the [HTTPS/RADIUS plan](https-radius-plan.md) and [HTTPS implementation](portal-https.md).
+- Production certificate issuance/renewal, reload/expiry diagnostics, normal deployment, RADIUS, journal recovery and scale qualification remain pending.
+
+## Repository and evidence state
+
+Workspace: `/home/sbeskur/repos/public/irongate`. All previously completed feature branches were integrated into `release/0.1.x` through `5695c36`, then plans/handoff were committed at `4812532` / `438a1d2`. No push, tag, deployment or feature-branch deletion was performed. Check remotes before any external action.
+
+The earlier HTTP Gate A clean run is `b9b9896b713cbfb0cc8093a5ea59961a` at `5695c36`. Initial dirty HTTPS run `bdc380b045883d2fd67d5f7d4435e4e7` passed browser/certificate/deadline cases before queue saturation was added; it is not the final accepted full-contract baseline. Locate the latest **passed schema-4, dirty-false report matching the feature runtime commit** under `target/vm/packet-lab/runs/`; never treat a newer failed/interrupted/dirty run as clean evidence. Per-run quality bundles should carry matching source identity, logs, LCOV/CRAP, dependency graph, ABI and footprint observations. Generated artifacts are ignored and not a release archive.
 
 ## What works and what does not yet
 
@@ -21,7 +28,7 @@ The lab has a 300-second lease, 30-second public consent grant, 60-second action
 
 The local journal retains 16 rows and reserves the final termination cell before granting; acknowledgements do not free retained capacity. Full/unavailable storage rejects new public grants while logout/expiry still revoke access. Rows are synced on the guest disk under `/var/lib/irongate-lab/local-records.jsonl`. Only the acknowledged prefix is promised: pending rows/crash termination can be lost. Recovery, rotation, durable billing and RADIUS export are not implemented. Current byte snapshots are daemon-wide submitted IP octets, not per-session directional accounting.
 
-## Evidence and checks
+## Earlier Gate A evidence and checks
 
 Canonical clean live run: `b9b9896b713cbfb0cc8093a5ea59961a`, source commit `5695c36`, dirty false, all 17 scenarios passed.
 
@@ -39,19 +46,15 @@ Verification at the integrated release checkpoint: formatting/Clippy pass, 135 R
 
 Important harness lessons: shared console/cloud-init buffering corrupted screenshot chunks during shutdown; redirecting directly to the original console also failed. The verified fix uses a separately configured second UART (`/dev/ttyS1`) for machine evidence, drained before shutdown. Keep strict identity/digest/completeness checks. Failed runs remain retained. Browser navigation waits for a fresh document, and the stale-generation scenario uses an explicit release from a live BusyBox DHCP client. The portal uses `Referrer-Policy: same-origin` to preserve strict form Origin checks; do not accept opaque/null origins to work around browser failures.
 
-## Next session
+## HTTPS-specific lessons
 
-1. Read [the detailed HTTPS/RADIUS plan](https-radius-plan.md), [burndown](burndown.md) and [current consent implementation](local-consent-portal.md). Check Git status/history and any repository instructions.
-2. Create `feature/portal-https` from current `release/0.1.x` after verifying it does not already exist. No such branch has been created yet.
-3. Review rustls and one explicit crypto provider: pinned versions, active/transitive features, licenses, static-musl build fit, memory and binary size. Rustls is the leading candidate, not a selected or added dependency. No new TLS dependency was added during planning.
-4. Implement HTTPS **consent** first using the current workers/owner. Explicitly configure the canonical Host/Origin; preserve bounded handshakes and HTTP limits. Establish a guest-only test CA with normal browser verification and negative certificate tests. Do not add credentials or RADIUS during this checkpoint.
-5. Retain the existing packet/portal suite and add TLS pressure/failure evidence; collect a fresh clean-commit run before integration. Integrate each completed checkpoint before branching the next.
+Shared-console corruption is avoided by the dedicated second serial channel and drain described above. Do not revert to the console/cloud-init tee for machine evidence. One parallel HTTPS host run was interrupted and retained as failed; qualify final VM runs sequentially.
 
-Subsequent planned branches: provider/configuration boundary, RADIUS authentication, accounting, then read-only runtime diagnostics. Gate B requires the whole authenticated and accounted lifecycle, not just an Accept response. Existing external-UAM configuration must retain its meaning. No general RADIUS server or credential database is planned.
+The guest OpenSSL rejects a negative `-days` certificate lifetime; expired fixtures use explicit past not-before/not-after dates. Guest Chromium did not accept the NSS trust fixture; the working setup uses its documented managed CA policy, never certificate-error bypass flags. Public test-only DER credentials under Rust test fixtures are intentionally committed; live guest keys are generated separately and never exported. Guest disk overlays contain test secrets and must not be included in public release bundles.
 
 ## Linux/libc decision to carry forward
 
-The tested daemon is static musl and has no host glibc dependency. The current default GNU development CLI references GLIBC through 2.34 and is not the portable release artifact. Propose shipping **both** tools as static musl; TLS/crypto dependencies must preserve that route. Rust 1.100 is the build minimum, not an installed-runtime requirement for prebuilt binaries.
+The tested daemon is static musl and has no host glibc dependency. The default GNU development CLI references GLIBC through 2.34. This feature also builds **both** tools as static musl and checks for absent dynamic interpreters/shared dependencies. Preserve that route for releases. Rust 1.100 is the build minimum, not an installed-runtime requirement for prebuilt binaries.
 
 Only x86-64 Debian 13 with guest kernel `6.12.117+deb13-cloud-amd64` has current live evidence. Proposed initial qualification matrix: Debian 12/13 and Ubuntu 24.04, x86-64, Linux 6.1+. These are targets to test, not approved universal support claims. Older kernels, RHEL-family systems and ARM need separate qualification. Binary ABI compatibility does not prove kernel/nftables/tooling/NIC compatibility.
 
@@ -69,7 +72,9 @@ just vm-lab-check
 just comparison-check
 just crap
 just vm-portal-prepare  # Reuses verified immutable guest browser image if present
-just vm-portal-test     # Fresh NIC-free VM, full browser/packet suite
+just vm-portal-test     # Explicit HTTP consent regression
+just vm-https-prepare  # Separate immutable guest certificate-tool image
+just vm-https-test     # Verified HTTPS, TLS failures/pressure, prior packet cases
 ```
 
 Prepared images/manifests live under `target/vm/packet-lab/`; preparation alone uses temporary QEMU userspace NAT for guest package downloads. Final tests use `-nic none`. Sandbox restrictions may require explicit escalation for Git writes or KVM; use the normal approval mechanism rather than changing host permissions. No fresh VM run is needed solely for this handoff document.

@@ -4,6 +4,8 @@ Gate A is integrated into `release/0.1.x` through `5695c36`: one-client standalo
 
 Gate B will demonstrate HTTPS login against an external RADIUS service, enforced policy and independently acknowledged accounting. Keep standalone consent runnable throughout. Integrate each completed checkpoint into `release/0.1.x` before branching the next; avoid stacking unfinished features. These are proposed branches and limits, not implemented capabilities or delivery estimates.
 
+The first HTTPS consent checkpoint is implemented on `feature/portal-https`; see its [implementation, dependency review and limits](portal-https.md). Review/integrate that feature before starting the provider/configuration boundary. No RADIUS implementation is included in it.
+
 ## Checkpoints in dependency order
 
 | Branch | Deliverable | Completion evidence |

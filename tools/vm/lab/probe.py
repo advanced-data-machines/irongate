@@ -4,6 +4,7 @@ import json
 import socket
 import sys
 from guest_common import namespace_guard
+import portal_config
 
 namespace_guard()
 connection = None
@@ -14,6 +15,8 @@ for line in sys.stdin:
         host, port = target.split(":")
         if connection is None:
             connection = socket.create_connection((host, int(port)), timeout=0.8)
+            if host=="10.50.10.1" and int(port)==8443:
+                connection=portal_config.context().wrap_socket(connection,server_hostname=host)
             connection.settimeout(0.8)
             stream = connection.makefile("rb")
         header=target if host=="10.50.10.1" else "origin.test"

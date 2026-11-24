@@ -60,3 +60,30 @@ class PortalEvidence(unittest.TestCase):
                 write(rows)
                 with self.subTest(change=change), self.assertRaises(ValueError):
                     artifacts.extract(directory,"a"*32,hashes)
+
+
+class TLSEvidence(unittest.TestCase):
+    def fixture(self):
+        guest=portal();guest.update(schema=4,suite="local-https-v1")
+        guest["cases"] += [{"name":name,"passed":True}for name in evidence.TLS_CASES]
+        guest["browser"].update(origin="https://10.50.10.1:8443",certificate_verification="normal")
+        guest["tls_certificates"]={"browser":{"expired":"net::ERR_CERT_DATE_INVALID","wrong_name":"net::ERR_CERT_COMMON_NAME_INVALID","untrusted":"net::ERR_CERT_AUTHORITY_INVALID"},"python":{name:{"rejected":True}for name in ("expired","wrong_name","untrusted")}}
+        guest["tls_pressure"]={"deadline":{"closed":12,"elapsed_seconds":2.1},"oversized":{"rejected":16},"transport":{"scheme":"https","tls_timeouts":2,"tls_failures":16,"queue_rejections":1},"memory_before":{"VmRSS":1000,"VmHWM":1000},"memory_after":{"VmRSS":1000,"VmHWM":1000}}
+        return guest
+
+    def test_verified_https_evidence_requires_full_portal_contract(self):
+        evidence.validate(self.fixture(),"a"*32,https=True)
+        guest=self.fixture();guest["local_records"]["durable"]=0
+        with self.assertRaises(ValueError):evidence.validate(guest,"a"*32,https=True)
+
+    def test_unverified_certificates_deadlines_or_missing_memory_cannot_pass(self):
+        for change in ("browser","python","deadline","memory","origin","verification"):
+            guest=self.fixture()
+            if change=="browser":guest["tls_certificates"]["browser"]["untrusted"]=""
+            elif change=="python":guest["tls_certificates"]["python"]["expired"]["rejected"]=False
+            elif change=="deadline":guest["tls_pressure"]["deadline"]["elapsed_seconds"]=10
+            elif change=="memory":guest["tls_pressure"]["memory_before"]={}
+            elif change=="origin":guest["browser"]["origin"]="http://10.50.10.1:8080"
+            else:guest["browser"]["certificate_verification"]="disabled"
+            with self.subTest(change=change),self.assertRaises(ValueError):
+                evidence.validate(guest,"a"*32,https=True)

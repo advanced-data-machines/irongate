@@ -24,6 +24,7 @@ pub(crate) struct Envelope {
 #[derive(Clone, Copy)]
 pub(crate) struct Snapshot {
     pub phase: &'static str,
+    pub transport: Option<super::metrics::Health>,
     pub now: u64,
     pub allowed: bool,
     pub generation: u64,

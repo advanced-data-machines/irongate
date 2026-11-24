@@ -4,6 +4,7 @@ import json
 import socket
 import sys
 from guest_common import namespace_guard
+import portal_config
 
 namespace_guard()
 slow=None
@@ -11,14 +12,15 @@ for line in sys.stdin:
     request=json.loads(line)
     try:
         if request.get("slow"):
-            slow=socket.create_connection(("10.50.10.1",8080),timeout=2)
+            slow=socket.create_connection(("10.50.10.1",portal_config.port()),timeout=2)
+            if portal_config.secure():slow=portal_config.context().wrap_socket(slow,server_hostname="10.50.10.1")
             slow.sendall(b"GET / HTTP/1.1\r\nHost: ")
             result={"status":200}
         else:
             headers={"Accept":"application/json"}
             if request.get("method")=="POST":
-                headers.update({"Origin":request.get("origin","http://10.50.10.1:8080"),"Content-Type":"application/x-www-form-urlencoded"})
-            conn=http.client.HTTPConnection("10.50.10.1",8080,timeout=3)
+                headers.update({"Origin":request.get("origin",portal_config.origin()),"Content-Type":"application/x-www-form-urlencoded"})
+            conn=(http.client.HTTPSConnection("10.50.10.1",portal_config.port(),timeout=3,context=portal_config.context())if portal_config.secure() else http.client.HTTPConnection("10.50.10.1",portal_config.port(),timeout=3))
             conn.request(request.get("method","GET"),request.get("path","/status"),request.get("body"),headers)
             reply=conn.getresponse();body=reply.read(16384)
             result={"status":reply.status,"headers":dict(reply.getheaders())}

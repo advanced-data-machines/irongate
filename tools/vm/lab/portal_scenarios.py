@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 from guest_common import CLIENT,WORK,command,spawn
 from browser import Browser
+import portal_config
 from scenarios import Probe,control,fresh,require
 
 
@@ -72,8 +73,11 @@ def run(children,report):
     try:
         namespace=os.readlink(f"/proc/{browser.proc.pid}/ns/net")
         require(namespace==report["topology"]["namespaces"][CLIENT],"Browser bypasses subscriber namespace")
-        report["browser"]={"product":browser.version,"namespace":namespace,"transport":"devtools_pipe","sandbox":"disabled_in_disposable_guest"}
+        report["browser"]={"origin":portal_config.origin(),"certificate_verification":"normal","product":browser.version,"namespace":namespace,"transport":"devtools_pipe","sandbox":"disabled_in_disposable_guest"}
         browser.navigate();browser.wait("document.body.dataset.allowed==='false'")
+        if portal_config.secure():
+            require(browser.evaluate("location.protocol==='https:' && window.isSecureContext"),"Browser is not a verified secure context")
+            report["tls_status"]=api.status()["transport"]
         browser.screenshot("portal-before.png")
         require(not fresh(children),"Browser client was admitted before consent")
         consumed=browser.evaluate("document.querySelector('[name=token]').value")

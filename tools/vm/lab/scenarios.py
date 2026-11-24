@@ -9,6 +9,7 @@ import subprocess
 import time
 from guest_common import CLIENT, GATEWAY, UPSTREAM, WORK, command, spawn
 import security
+import portal_config
 
 
 def require(condition, message):
@@ -73,7 +74,7 @@ def run(children, report):
     status = control("status")
     require(status["phase"] == "Leased" and not status["allowed"], "Lease unexpectedly authorized traffic")
     cases.append({"name": "real_busybox_dhcp", "passed": True})
-    require(fresh(children, "10.50.10.1:8080"), "Native local service unreachable before admission")
+    require(fresh(children, f"10.50.10.1:{portal_config.port()}"), "Native local service unreachable before admission")
     require(control("status")["counters"]["arp"] > 0, "No userspace ARP reply observed")
     cases.append({"name": "userspace_arp_and_native_local_tcp", "passed": True})
     require(not fresh(children), "Upstream reachable without consent")
@@ -82,6 +83,9 @@ def run(children, report):
     if report.get("portal"):
         import portal_scenarios
         portal_scenarios.run(children,report)
+    if report.get("https"):
+        import tls_scenarios
+        tls_scenarios.run(children,report)
     require(control("consent")["allowed"], "Policy application did not authorize")
     require(fresh(children), "Fresh admitted upstream TCP failed")
     live = Probe(children)

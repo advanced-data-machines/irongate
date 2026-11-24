@@ -10,6 +10,8 @@ Portal configuration explicitly distinguishes [local on-device and external/clou
 
 For the next development session, start with the [session handoff](docs/handoff.md), which records the release checkpoint, evidence locations and HTTPS next steps.
 
+The [HTTPS consent checkpoint](docs/portal-https.md) adds a guest-only test CA and verified browser TLS through `just vm-https-test`. RADIUS and production certificate automation remain pending.
+
 ## Try the CLI
 
 ```sh

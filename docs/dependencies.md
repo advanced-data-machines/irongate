@@ -34,3 +34,7 @@ Use a vetted serialization/parsing crate instead of hand-writing a general JSON 
 ## Native consent HTTP boundary
 
 The Linux-only lab additionally uses `httparse 1.10.1` for strict, bounded HTTP/1.1 request framing, with its default `std` feature. This established parser adds no runtime transitive dependencies. IronGate applies its own narrow Host/Origin/body policy after parsing; no general HTTP server, async runtime or web framework is added. Two standard-library HTTP workers use fixed request buffers and bounded channels. Existing `serde_json` handles small control/record responses outside packet processing. `rustix` adds its `rand` feature for nonblocking OS entropy; no separate random-number crate or weak fallback is used. See the [local consent boundary](local-consent-portal.md).
+
+## HTTPS consent review
+
+The [HTTPS checkpoint](portal-https.md) pins rustls 0.23.46 with defaults disabled and one ring provider. It records the active Linux runtime/build graph, provider comparison, licenses, memory boundaries and static-musl binary checks. `http` and parse-only `toml` are reused in the lab daemon; no new framework, async runtime or Serde derive features are enabled.

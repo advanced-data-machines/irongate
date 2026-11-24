@@ -52,6 +52,7 @@ impl State<'_> {
                     None
                 };
                 Reply::View(Snapshot {
+                    transport: None,
                     phase: phase(view.phase),
                     now: self.sessions.now(),
                     allowed,
