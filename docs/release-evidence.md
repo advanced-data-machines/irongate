@@ -53,6 +53,12 @@ The [login slice](radius-login.md) combines the minimal provider boundary with o
 
 Schema-5 `radius-login-v1` requires 20 cases, including the original packet/HTTPS guards, genuine backend Accept/Reject/recovery, enforced policy expiry and explicitly separated synthetic wire failures. Host validation requires scoped source-tagged local rows and explicitly unimplemented RADIUS accounting; local audit must not be reported as backend accounting acknowledgement. Development run `4901ffe3c3599826b331020899990c5c` and the separate standalone HTTPS regression are dirty evidence. Retain final clean runtime commits/runs independently with full quality and static ABI/footprint identity. Backend configs/disks contain test secrets and must not be published in the release evidence bundle.
 
+## Tagged authentication integration
+
+Annotated tag `checkpoint/radius-login` points to `84abe82`, the exact runtime commit integrated into `release/0.1.x`. Clean run `fe2936ad0b8c640dbe0039fcd6db23b0` passed all 20 RADIUS cases. Source/binary/lockfile identity and every recorded quality-bundle hash were verified before integration. The bundle contains 149 passing Rust tests, 36 Python regressions, LCOV/CRAP, dependency metadata and static ABI/footprint evidence. A following documentation-only commit records integration; do not relabel the runtime evidence as execution of that later commit.
+
+The checkpoint is local development evidence, not a published release or completed alpha. Accounting, operational/demo integration and durable release archival remain pending. The raw bundle stays under ignored `target/vm/packet-lab/runs/`; the tag does not archive those files or any guest disks.
+
 ## Release bundle contract
 
 Before publishing a release candidate, retain the following together:

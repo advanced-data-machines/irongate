@@ -1,14 +1,15 @@
 # Session handoff: RADIUS login slice
 
-Current feature: `feature/radius-login`, branched from release at `d119adf` after HTTPS was integrated. Check actual Git status/history before resuming. The feature's own commit follows this documentation update; release remains separate until explicitly integrated. No push, tag, deployment or feature-branch deletion was performed.
+Current branch: `release/0.1.x`. The RADIUS login feature is integrated at `84abe82`; annotated tag `checkpoint/radius-login` targets that exact tested runtime commit. A documentation-only integration commit follows it. Check actual Git status/history before resuming. No push, deployment or feature-branch deletion was performed.
 
 ## Current checkpoint and next action
 
 - The authentication increment of the agreed [lab alpha](lab-alpha.md) is implemented: one HTTPS/PAP backend, explicit native lab TOML, provider-specific typed attempts, cryptographically validated replies, Session-Timeout and visible authentication outcomes.
 - Current ordinary checks: 149 Rust tests, 20 host lab/evidence tests and 16 comparison regressions. CRAP analyzes 309 functions; only the old CLI parser exceeds 30 (39.32). Native bootstrap/serving coverage is still incomplete.
+- Canonical clean RADIUS run: `fe2936ad0b8c640dbe0039fcd6db23b0`, source `84abe82`, 20 passing scenarios and matching quality/binary identity.
 - First dirty RADIUS development run: `4901ffe3c3599826b331020899990c5c`, 20 cases against FreeRADIUS `3.2.7+dfsg-1+deb13u2`. Wrong-ID/length fault probes were subsequently strengthened so cryptographic checks cannot hide a missing structural/identifier check.
 - Standalone HTTPS regression passed separately in dirty run `81eae6a5e2d6863c851bd00539274ff7` (19 cases). Find final **passed schema-5 / radius-login-v1, dirty-false** reports matching the feature commit under `target/vm/packet-lab/runs/`; never substitute the development run for clean evidence.
-- Review/integrate this slice, then implement **RADIUS accounting**, then operational/demo integration. Do not start a provider plugin framework or add unrelated auth methods. The minimal provider boundary is already part of this real path.
+- Next implement **RADIUS accounting**, then operational/demo integration. Do not start a provider plugin framework or add unrelated auth methods. The minimal provider boundary is already part of this real path.
 - RADIUS accounting is explicitly `not_implemented`. Six synced provider-tagged local audit rows do not constitute Start/Interim/Stop or durable billing. Normal deployment, journal recovery/rotation, production certificates/protected backend transport, two VLANs/cloud and load qualification remain pending.
 - The user plans a dedicated gateway appliance later. Keep current work inside QEMU; start appliance qualification on an isolated test LAN as described in the alpha plan.
 

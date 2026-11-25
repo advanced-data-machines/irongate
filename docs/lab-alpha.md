@@ -4,7 +4,7 @@ The next deliverable is a **RADIUS-backed lab alpha**. It is deliberately earlie
 
 | Increment | Good enough / exit criterion | Status |
 | --- | --- | --- |
-| Authentication | One configured backend/method, HTTPS login, validated Accept/Reject/timeout, applied Session-Timeout, stale-result rejection and visible outcomes | Implemented on `feature/radius-login`; see [evidence and limits](radius-login.md) |
+| Authentication | One configured backend/method, HTTPS login, validated Accept/Reject/timeout, applied Session-Timeout, stale-result rejection and visible outcomes | Integrated into `release/0.1.x` at `84abe82`; see [evidence and limits](radius-login.md) |
 | Accounting | Matching Start/Interim/Stop identity, directional 64-bit counters, bounded retries/capacity and observable backlog; logout immediate during failure | Next |
 | Repeatable demonstration | One documented profile and command, readable configuration, actionable passive diagnostics, clean-commit correctness and basic performance evidence | VM commands exist; operational/configuration integration and final evidence packaging remain |
 
