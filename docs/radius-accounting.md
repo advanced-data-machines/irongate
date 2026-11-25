@@ -88,4 +88,4 @@ Runtime commit **`880a27d50810b34baf0f979a1e02dabcb000a4ed`** passed accounting 
 
 All 161 Rust tests and 38 Python checks pass. CRAP analyzes 342 functions with only the existing CLI parser above 30 (39.32). The outbox is 3,104 bytes in this build. Stripped static-musl artifacts are 881,432 bytes for `ig` and 2,143,112 for `irongated`; neither has an ELF interpreter or shared-library dependencies. These are build/functional observations, not gateway capacity measurements. Accounting introduced no new Cargo dependencies.
 
-Reports and quality files live under ignored `target/vm/packet-lab/runs/`, not a durable public archive. Do not publish guest disks or private backend/certificate configuration. The feature is ready for integration review; no merge, new tag or push is implied by this checkpoint.
+Reports and quality files live under ignored `target/vm/packet-lab/runs/`, not a durable public archive. Do not publish guest disks or private backend/certificate configuration. The feature and evidence documentation were subsequently integrated into `release/0.1.x` by fast-forward. No new tag or push was performed.
