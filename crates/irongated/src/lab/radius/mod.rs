@@ -2,7 +2,7 @@
 pub(crate) mod client;
 pub(crate) mod config;
 pub(crate) mod credentials;
-mod crypto;
+pub(crate) mod crypto;
 pub(crate) mod health;
 mod request;
 mod response;

@@ -48,9 +48,32 @@ impl Endpoint {
 pub(crate) struct Settings {
     pub endpoint: Endpoint,
     pub tls: Option<Arc<rustls::ServerConfig>>,
+    pub accounting: Option<Arc<crate::lab::accounting::config::Config>>,
     pub radius: Option<Arc<crate::lab::radius::config::Config>>,
 }
 impl Settings {
+    pub fn owner_state(
+        &self,
+    ) -> io::Result<(
+        irongate_core::session::Provider,
+        crate::lab::accounting::Outbox,
+    )> {
+        let provider = if self.radius.is_some() {
+            irongate_core::session::Provider::Radius
+        } else {
+            irongate_core::session::Provider::Consent
+        };
+        let accounting = if let Some(config) = &self.accounting {
+            let entropy = crate::lab::entropy::bytes()?;
+            crate::lab::accounting::Outbox::enabled(
+                entropy[..16].try_into().unwrap(),
+                config.interval,
+            )
+        } else {
+            Default::default()
+        };
+        Ok((provider, accounting))
+    }
     pub fn load(path: &Path) -> io::Result<Self> {
         let bytes = super::tls_config::read_bounded(path, 4096, false)?;
         Self::parse(std::str::from_utf8(&bytes).map_err(|_| invalid("config is not UTF-8"))?)
@@ -68,6 +91,9 @@ impl Settings {
                 "radius_endpoint",
                 "radius_secret_file",
                 "nas_identifier",
+                "accounting",
+                "accounting_endpoint",
+                "accounting_interim_seconds",
             ]
             .contains(&k.get_ref().as_ref())
         }) {
@@ -115,7 +141,9 @@ impl Settings {
                 ));
             }
         };
+        let accounting = crate::lab::accounting::config::Config::load(table, radius.as_ref())?;
         Ok(Self {
+            accounting,
             endpoint,
             tls,
             radius,

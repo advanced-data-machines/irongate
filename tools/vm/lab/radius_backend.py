@@ -70,6 +70,10 @@ server default {{
  }}
 }}
 '''
+    if (WORK/"mode").read_text().strip()=="accounting":
+        config=config.replace("modules {", f"modules {{\n detail {{\n  filename = {root}/accounting-detail\n  permissions = 0600\n  locking = yes\n }}")
+        config=config.replace("server default {", "server default {\n listen {\n  type = acct\n  ipaddr = 192.0.2.80\n  port = 1813\n }\n accounting {\n  detail\n }")
+        (root/"users").write_text((root/"users").read_text().replace("Session-Timeout := 5", "Session-Timeout := 30"))
     (root/"radiusd.conf").write_text(config)
     for path in root.iterdir():path.chmod(0o600)
 

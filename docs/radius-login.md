@@ -4,7 +4,7 @@
 
 The first development run, `4901ffe3c3599826b331020899990c5c`, passed 20 guest scenarios using FreeRADIUS `3.2.7+dfsg-1+deb13u2`. It is dirty development evidence. Qualifying runs must independently record a clean matching runtime commit and pass the complete schema-5 `radius-login-v1` validator. Current ordinary checks pass 149 Rust tests, 20 host lab/evidence regressions and 16 comparison regressions. CRAP analyzes 309 functions; only the existing CLI parser exceeds 30 (39.32). Startup/native serving coverage remains incomplete; live execution is not merged into LCOV.
 
-This completes the authentication slice of the [lab-alpha finish line](lab-alpha.md), not Gate B or production readiness. RADIUS accounting, runtime CLI diagnostics, normal gateway deployment, protected backend transport and scale qualification remain pending.
+This completes the authentication slice of the [lab-alpha finish line](lab-alpha.md), not Gate B or production readiness. RADIUS accounting is now implemented separately in the [accounting lab slice](radius-accounting.md). Runtime CLI diagnostics, normal gateway deployment, protected backend transport and scale qualification remain pending.
 
 ## Run and observe
 
@@ -80,7 +80,7 @@ Request/reply packet buffers are fixed. Response verification hashes borrowed pa
 
 Health describes retained exchange evidence, not an active reachability probe or a guarantee about downstream databases. A timeout alone cannot distinguish route loss, unregistered NAS or secret mismatch. The backend never sits in the packet-by-packet forwarding path. Logout/expiry do not wait for backend availability.
 
-Local rows now record the policy provider. The test expects three grant/termination lifecycles, including one expiry, with six synced scoped rows. These remain **local audit records, not RADIUS Start/Interim/Stop accounting**. Status explicitly reports accounting as `not_implemented`. Journal retention/recovery/crash limitations are unchanged.
+Local rows now record the policy provider. The test expects three grant/termination lifecycles, including one expiry, with six synced scoped rows. These remain **local audit records, not RADIUS Start/Interim/Stop accounting**. The authentication-only fixture reports accounting as `not_implemented`; the separate accounting-enabled fixture reports accounting health independently. Journal retention/recovery/crash limitations are unchanged.
 
 ## Dependency and protocol review
 
@@ -96,4 +96,4 @@ The 20-case suite combines eleven original packet/isolation cases, two HTTPS cer
 
 Every accepted run retains exact commit/dirty state, binary/image/harness hashes, backend version, scoped local audit, screenshots and dedicated serial evidence. Keep the separate standalone HTTPS suite passing. Static-musl ABI/footprint checks and fresh LCOV/CRAP belong with the clean final report; ignored `target/` is still not a release archive.
 
-Next is RADIUS accounting with bounded obligations, directional counters and visible lag/recovery. After that, make the selected lab profile and diagnostics repeatable for evaluation. The [alpha checklist](lab-alpha.md) defines the stop point; appliance and full-MVP qualification follow separately.
+The [accounting slice](radius-accounting.md) adds bounded obligations, directional counters and visible lag/recovery. Next make the selected lab profile and diagnostics repeatable for evaluation. The [alpha checklist](lab-alpha.md) defines the stop point; appliance and full-MVP qualification follow separately.

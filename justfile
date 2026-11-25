@@ -128,3 +128,8 @@ vm-radius-prepare:
 vm-radius-test:
     cargo build -p irongated --release --target x86_64-unknown-linux-musl --offline
     python3 -m tools.vm.lab.run --radius
+
+# Verify directional RADIUS accounting and immediate revocation during sink failure.
+vm-accounting-test:
+    cargo build -p irongated --release --target x86_64-unknown-linux-musl --offline
+    python3 -m tools.vm.lab.run --accounting

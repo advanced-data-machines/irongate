@@ -21,7 +21,9 @@ def main():
     parser.add_argument("--portal",action="store_true",help="Use the guest browser image and consent walkthrough")
     parser.add_argument("--https",action="store_true",help="Verified HTTPS consent and TLS failure suite")
     parser.add_argument("--radius",action="store_true",help="One verified HTTPS/PAP FreeRADIUS login profile")
+    parser.add_argument("--accounting",action="store_true",help="Bounded RADIUS accounting with outage/recovery proof")
     args = parser.parse_args()
+    if args.accounting:args.radius=True
     if args.radius:args.https=True
     if args.https:args.portal=True
     if args.print:
@@ -50,21 +52,22 @@ def main():
     if args.portal:report.update({"schema":3,"suite":"local-consent-v1"})
     if args.https:report.update({"schema":4,"suite":"local-https-v1"})
     if args.radius:report.update({"schema":5,"suite":"radius-login-v1"})
+    if args.accounting:report.update({"schema":6,"suite":"radius-accounting-v1"})
     report_path.write_text(json.dumps(report, indent=2) + "\n")
     try:
         shutil.copy2(binary, directory / "payload/irongated")
         report["binary_sha256"] = digest(binary)
-        for name in ("guest.py", "guest_common.py", "topology.py", "scenarios.py", "supervisor.py", "client_lease.py", "services.py", "probe.py", "security.py", "capture.py", "inject.py","browser.py","api_client.py","portal_scenarios.py","artifacts.py","portal_config.py","certificates.py","tls_scenarios.py","tls_probe.py","tls_fixture.py","radius_backend.py","radius_scenarios.py","radius_fault.py"):
+        for name in ("guest.py", "guest_common.py", "topology.py", "scenarios.py", "supervisor.py", "client_lease.py", "services.py", "probe.py", "security.py", "capture.py", "inject.py","browser.py","api_client.py","portal_scenarios.py","artifacts.py","portal_config.py","certificates.py","tls_scenarios.py","tls_probe.py","tls_fixture.py","radius_backend.py","radius_scenarios.py","radius_fault.py","accounting_backend.py","accounting_scenarios.py","accounting_traffic.py"):
             shutil.copy2(SOURCE / name, directory / "payload" / name)
         (directory / "payload/client_lease.py").chmod(0o755)
         report["harness_sha256"] = {p.name: digest(p) for p in (directory / "payload").iterdir()}
         overlay(prepared["image"], directory / "disk.qcow2")
-        seed(directory, run_id, "radius"if args.radius else"https"if args.https else"portal"if args.portal else"test")
+        seed(directory, run_id, "accounting"if args.accounting else"radius"if args.radius else"https"if args.https else"portal"if args.portal else"test")
         print(f"Booting NIC-free packet lab; retained evidence: {directory}", flush=True)
         boot(directory)
         guest = result(directory, "IG_LAB_RESULT ")
         report["guest"] = guest
-        validate(guest, run_id,portal=args.portal,https=args.https,radius=args.radius)
+        validate(guest, run_id,portal=args.portal,https=args.https,radius=args.radius,accounting=args.accounting)
         if args.portal:extract(directory,run_id,guest.get("screenshots",{}))
         report["status"] = "passed"
     except Exception as error:

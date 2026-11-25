@@ -7,8 +7,8 @@ use crate::lab::{
 use irongate_core::{lease, session};
 impl State<'_> {
     pub(super) fn begin_radius(&mut self, handle: session::Handle) -> Reply {
-        if !self.journal.can_admit() {
-            return Reply::Error(503, "Local record capacity is unavailable.");
+        if !self.journal.can_admit() || !self.accounting.can_admit() {
+            return Reply::Error(503, "Local records or accounting capacity are unavailable.");
         }
         match self.sessions.begin_radius(&self.leases, handle) {
             Ok(attempt) => {
@@ -18,7 +18,12 @@ impl State<'_> {
             Err(_) => Reply::Error(409, "Session changed. Reload the portal."),
         }
     }
-    pub(super) fn radius_result(&mut self, attempt: session::Attempt, decision: Decision) -> Reply {
+    pub(super) fn radius_result(
+        &mut self,
+        attempt: session::Attempt,
+        decision: Decision,
+        identity: Option<crate::lab::accounting::UserName>,
+    ) -> Reply {
         let Some(view) = self.sessions.view(attempt.session()) else {
             return self.stale_radius();
         };
@@ -37,19 +42,36 @@ impl State<'_> {
         self.tokens.invalidate();
         match decision.outcome {
             Outcome::Accept { seconds } => {
-                if !self.journal.can_admit() {
+                if !self.journal.can_admit() || !self.accounting.can_admit() {
                     let _ = self.sessions.radius_deny(
                         &self.leases,
                         attempt,
                         session::EndReason::AuthenticationFailed,
                     );
-                    return Reply::Error(503, "Local record capacity is unavailable.");
+                    return Reply::Error(
+                        503,
+                        "Local records or accounting capacity are unavailable.",
+                    );
+                }
+                if self.accounting.is_enabled()
+                    && !identity.is_some_and(|user| {
+                        self.accounting
+                            .reserve(view.handle, view.lease, user, self.sessions.now())
+                    })
+                {
+                    let _ = self.sessions.radius_deny(
+                        &self.leases,
+                        attempt,
+                        session::EndReason::AuthenticationFailed,
+                    );
+                    return Reply::Error(503, "Accounting identity or capacity unavailable.");
                 }
                 if self
                     .sessions
                     .radius_accept(&self.leases, attempt, seconds)
                     .is_err()
                 {
+                    self.accounting.cancel();
                     return self.stale_radius();
                 }
                 self.finish_admission(view.handle, view.lease)
@@ -103,8 +125,10 @@ impl State<'_> {
     ) -> Reply {
         if self.pump().is_err() || !self.allowed() {
             self.applied = None;
+            self.accounting.cancel();
             return Reply::Error(503, "Access could not be applied. Please retry.");
         }
+        self.accounting.activate(handle, lease, self.sessions.now());
         let provider = self
             .sessions
             .view(handle)

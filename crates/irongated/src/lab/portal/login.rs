@@ -45,7 +45,15 @@ pub(super) fn complete(
     ask(
         sender,
         peer,
-        Request::RadiusResult { attempt, decision },
+        Request::RadiusResult {
+            attempt,
+            decision,
+            identity: if matches!(decision.outcome, crate::lab::radius::Outcome::Accept { .. }) {
+                crate::lab::accounting::UserName::new(credentials.user())
+            } else {
+                None
+            },
+        },
         notify,
     )
 }

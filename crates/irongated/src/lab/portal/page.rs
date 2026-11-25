@@ -8,9 +8,17 @@ use super::{
 use serde_json::{Value, json};
 
 pub(super) fn status(view: Snapshot) -> Value {
+    let mut authentication = view.authentication.status(
+        view.provider == irongate_core::session::Provider::Radius,
+        view.now,
+    );
+    if view.accounting.enabled {
+        authentication["accounting"] = "reported_separately".into();
+    }
     json!({"scope":"local_lab_consent","hosting":"local","provider":if view.provider==irongate_core::session::Provider::Radius{"radius"}else{"consent"},
         "policy_source":view.policy_source.map(|p|match p{irongate_core::session::Provider::Consent=>"consent",irongate_core::session::Provider::Radius=>"radius"}),
-        "authentication":view.authentication.status(view.provider==irongate_core::session::Provider::Radius,view.now),"network":1,
+        "authentication":authentication,"network":1,
+        "accounting":view.accounting.json(view.now),
         "transport":view.transport.map(|h|json!({"scheme":if h.secure{"https"}else{"http"},"tls_handshakes":h.completed,"tls_failures":h.failed,"tls_timeouts":h.timed_out,"accepted":h.accepted,"queue_rejections":h.busy})),
         "phase":view.phase,"now":view.now,"allowed":view.allowed,"generation":view.generation,"until":view.until,
         "forwarded_ip_bytes":view.ip_bytes,"admission_available":view.admission_available,
@@ -112,7 +120,7 @@ fn render(view: Snapshot) -> String {
         None => String::new(),
     };
     let warning = if !view.allowed && !view.admission_available {
-        "<p class=warning>The local activity log is full or unavailable. New connections are paused.</p>"
+        "<p class=warning>Local records or accounting delivery are unavailable. New connections are paused.</p>"
     } else {
         ""
     };

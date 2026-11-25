@@ -94,7 +94,17 @@ fn nonblocking_datagram_dispatch_only_submits_authorized_route_and_counts_send_f
         origin.recv(&mut input).unwrap_err().kind(),
         ErrorKind::WouldBlock
     );
+    state.accounting = crate::lab::accounting::Outbox::enabled([1; 16], 2);
+    let handle = state.active.unwrap();
+    let lease = state.sessions.view(handle).unwrap().lease;
+    assert!(state.accounting.reserve(
+        handle,
+        lease,
+        crate::lab::accounting::UserName::new(b"test").unwrap(),
+        0
+    ));
     state.control(b"consent");
+    state.accounting.activate(handle, lease, 0);
     client.send(&tcp).unwrap();
     crate::lab::io::packet_budget(
         &mut state,
@@ -113,6 +123,7 @@ fn nonblocking_datagram_dispatch_only_submits_authorized_route_and_counts_send_f
     );
     assert_eq!(state.counters.forwarded, 1);
     assert_eq!(state.counters.forwarded_ip_bytes, 40);
+    assert_eq!(state.accounting.snapshot(0).current.unwrap().input, 40);
     drop(origin);
     client.send(&tcp).unwrap();
     crate::lab::io::packet_budget(
@@ -123,6 +134,7 @@ fn nonblocking_datagram_dispatch_only_submits_authorized_route_and_counts_send_f
         &mut output,
     )
     .unwrap();
+    assert_eq!(state.accounting.snapshot(0).current.unwrap().input, 40);
     assert_eq!(state.counters.tx_errors, 1);
     assert_eq!(state.counters.forwarded, 1);
 }

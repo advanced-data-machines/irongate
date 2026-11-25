@@ -11,12 +11,13 @@ pub fn run(run_id: &str) -> Result<(), Box<dyn std::error::Error>> {
     guard(run_id)?;
     let mut transport = Transport::inherited()?;
     let (portal, worker) = super::portal::Bridge::pair()?;
-    let provider = super::portal::start(worker, run_id)?;
+    let (provider, accounting) = super::portal::start(worker, run_id)?;
     transport.portal = Some(portal);
     let mut lease_slots = [irongate_core::lease::Slot::EMPTY];
     let mut session_slots = [irongate_core::session::Slot::EMPTY];
     let mut state = State::new(&mut lease_slots, &mut session_slots);
     state.provider = provider;
+    state.accounting = accounting;
     eprintln!("IronGate lab ready; run={run_id}; upstream initially denied");
     owner::serve(&mut state, &transport)
 }
@@ -71,6 +72,14 @@ pub(super) fn packet_budget(
             match target.write(&output[..used]) {
                 Ok(sent) if sent == used => {
                     if side != destination {
+                        if let Some((handle, lease, _)) = state.applied {
+                            state.accounting.submitted(
+                                handle,
+                                lease,
+                                side == Side::Down,
+                                (used - 14) as u64,
+                            );
+                        }
                         state.counters.forwarded = state.counters.forwarded.saturating_add(1);
                         state.counters.forwarded_ip_bytes = state
                             .counters

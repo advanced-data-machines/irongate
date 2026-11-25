@@ -21,6 +21,7 @@ pub(crate) enum Request {
     RadiusResult {
         attempt: irongate_core::session::Attempt,
         decision: crate::lab::radius::Decision,
+        identity: Option<crate::lab::accounting::UserName>,
     },
 }
 
@@ -35,6 +36,7 @@ pub(crate) struct Snapshot {
     pub phase: &'static str,
     pub provider: irongate_core::session::Provider,
     pub policy_source: Option<irongate_core::session::Provider>,
+    pub accounting: crate::lab::accounting::Summary,
     pub authentication: crate::lab::radius::health::Health,
     pub transport: Option<super::metrics::Health>,
     pub now: u64,
@@ -69,6 +71,8 @@ pub(crate) enum Reply {
 
 pub(crate) struct Bridge {
     pub receiver: Receiver<Envelope>,
+    pub accounting_sender: SyncSender<crate::lab::accounting::Dispatch>,
+    pub accounting_acks: Receiver<crate::lab::accounting::Receipt>,
     pub record_sender: SyncSender<Record>,
     pub record_acks: Receiver<(usize, bool)>,
     pub wake: UnixDatagram,
@@ -76,6 +80,8 @@ pub(crate) struct Bridge {
 
 pub(crate) struct WorkerBridge {
     pub sender: SyncSender<Envelope>,
+    pub accounting: Receiver<crate::lab::accounting::Dispatch>,
+    pub accounting_acks: SyncSender<crate::lab::accounting::Receipt>,
     pub records: Receiver<Record>,
     pub record_acks: SyncSender<(usize, bool)>,
     pub wake: UnixDatagram,
@@ -83,6 +89,8 @@ pub(crate) struct WorkerBridge {
 
 impl Bridge {
     pub fn pair() -> std::io::Result<(Self, WorkerBridge)> {
+        let (accounting_sender, accounting) = mpsc::sync_channel(1);
+        let (accounting_acks, accounting_replies) = mpsc::sync_channel(1);
         let (sender, receiver) = mpsc::sync_channel(8);
         let (record_sender, records) = mpsc::sync_channel(1);
         let (record_acks, acks) = mpsc::sync_channel(1);
@@ -92,12 +100,16 @@ impl Bridge {
         Ok((
             Self {
                 receiver,
+                accounting_sender,
+                accounting_acks: accounting_replies,
                 record_sender,
                 record_acks: acks,
                 wake,
             },
             WorkerBridge {
                 sender,
+                accounting,
+                accounting_acks,
                 records,
                 record_acks,
                 wake: notify,
@@ -122,6 +134,7 @@ impl Bridge {
                 Err(mpsc::TryRecvError::Empty) => break,
             }
         }
+        self.accounting_budget(state);
         state.journal.tick(state.sessions.now());
         for _ in 0..8 {
             let Ok(envelope) = self.receiver.try_recv() else {

@@ -34,6 +34,7 @@ fn owner_delivers_scoped_views_and_writer_acknowledges_ordered_grant_and_stop() 
         records,
         record_acks,
         wake,
+        ..
     } = worker;
     let thread = std::thread::spawn(move || {
         writer::run(file, records, record_acks, wake, "test-run".to_owned())

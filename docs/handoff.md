@@ -1,19 +1,17 @@
-# Session handoff: RADIUS login slice
+# Session handoff: RADIUS accounting slice
 
-Current branch: `release/0.1.x`. The RADIUS login feature is integrated at `84abe82`; annotated tag `checkpoint/radius-login` targets that exact tested runtime commit. A documentation-only integration commit follows it. Check actual Git status/history before resuming. No push, deployment or feature-branch deletion was performed.
+Current branch: `feature/radius-accounting`, based on `release/0.1.x` at `fb00e8b`. Authentication remains integrated/tagged at `84abe82` / `checkpoint/radius-login`. Check Git status/history before resuming. Do not push, tag a new release, delete branches or change workstation networking without authorization.
 
 ## Current checkpoint and next action
 
-- The authentication increment of the agreed [lab alpha](lab-alpha.md) is implemented: one HTTPS/PAP backend, explicit native lab TOML, provider-specific typed attempts, cryptographically validated replies, Session-Timeout and visible authentication outcomes.
-- Current ordinary checks: 149 Rust tests, 20 host lab/evidence tests and 16 comparison regressions. CRAP analyzes 309 functions; only the old CLI parser exceeds 30 (39.32). Native bootstrap/serving coverage is still incomplete.
-- Canonical clean RADIUS run: `fe2936ad0b8c640dbe0039fcd6db23b0`, source `84abe82`, 20 passing scenarios and matching quality/binary identity.
-- First dirty RADIUS development run: `4901ffe3c3599826b331020899990c5c`, 20 cases against FreeRADIUS `3.2.7+dfsg-1+deb13u2`. Wrong-ID/length fault probes were subsequently strengthened so cryptographic checks cannot hide a missing structural/identifier check.
-- Standalone HTTPS regression passed separately in dirty run `81eae6a5e2d6863c851bd00539274ff7` (19 cases). Find final **passed schema-5 / radius-login-v1, dirty-false** reports matching the feature commit under `target/vm/packet-lab/runs/`; never substitute the development run for clean evidence.
-- Next implement **RADIUS accounting**, then operational/demo integration. Do not start a provider plugin framework or add unrelated auth methods. The minimal provider boundary is already part of this real path.
-- RADIUS accounting is explicitly `not_implemented`. Six synced provider-tagged local audit rows do not constitute Start/Interim/Stop or durable billing. Normal deployment, journal recovery/rotation, production certificates/protected backend transport, two VLANs/cloud and load qualification remain pending.
-- The user plans a dedicated gateway appliance later. Keep current work inside QEMU; start appliance qualification on an isolated test LAN as described in the alpha plan.
-
-Read [RADIUS implementation and limits](radius-login.md), [alpha finish line](lab-alpha.md) and [burndown](burndown.md) before new work. The [older HTTPS/RADIUS design](https-radius-plan.md) supplies background; authentication/provider checkpoints were deliberately combined into one slice.
+- The second [lab-alpha increment](lab-alpha.md) is implemented: real RADIUS Start/Interim/Stop, boot-unique lifecycle IDs, per-session directional submitted IP octets, four fixed lifecycle slots with reserved Stop capacity, one dedicated bounded worker and observable outage/backlog/recovery.
+- See [accounting implementation and limits](radius-accounting.md) first. Outbox storage is volatile; crash replay, shutdown draining and durable billing are not promised. Passwords/shared secrets never enter owner messages; authenticated bounded User-Name is now retained for accounting. Public status/test exports omit usernames.
+- Ordinary checks: **161 Rust tests**, **22 host lab/evidence tests**, **16 comparison regressions**. CRAP analyzes **342 functions**; only the existing CLI parser exceeds 30 (39.32). Startup/serving coverage remains incomplete; VM execution is not merged into LCOV.
+- Development accounting run `122c603d251af060f6bb05cce7532238` passed all **18 schema-6 cases**. Input 65,792/output 314,368 IP octets matched the independent workload and FreeRADIUS detail sink. Logout during the sink outage took about 3 ms in that run; this is functional evidence, not a latency guarantee. The run is dirty and predates final status/module changes; retain clean-commit reruns separately.
+- Use `just vm-accounting-test` (reuse the `vm-radius-prepare` image). The fixture enables explicit accounting TOML; original `just vm-radius-test` keeps its authentication-only 20-case contract. Run VMs sequentially.
+- Runtime source and checks are ready for a feature checkpoint. Record clean-source accounting/login-regression evidence with matching quality, binary, dependency and static ABI identity before integration. No new Cargo dependencies or core/proto allocator dependencies were added.
+- After this checkpoint, finish **operational/configuration/diagnostics and repeatable demonstration integration**, the third and final alpha increment. Then stop alpha feature expansion. Two VLANs/cloud, normal deployment, production recovery/transport/certificates and scale/appliance qualification remain separate later gates.
+- Keep every live backend, PKI, firewall, routing and NIC change inside the disposable QEMU guest. No workstation network/trust changes. The user plans a dedicated appliance later, starting on an isolated test LAN.
 
 ## Repository and evidence state
 
@@ -37,7 +35,7 @@ Userspace owns per-session forwarding decisions; nftables is the independent per
 
 The lab has a 300-second lease, 30-second public consent grant, 60-second action, two HTTP workers, accepted queue four, owner queue eight, 8192-byte requests, 32 headers and 128-byte bodies. Private root-only fixture consent still grants five seconds; do not confuse it with public portal admission.
 
-The local journal retains 16 rows and reserves the final termination cell before granting; acknowledgements do not free retained capacity. Full/unavailable storage rejects new public grants while logout/expiry still revoke access. Rows are synced on the guest disk under `/var/lib/irongate-lab/local-records.jsonl`. Only the acknowledged prefix is promised: pending rows/crash termination can be lost. Recovery, rotation, durable billing and RADIUS export are not implemented. Current byte snapshots are daemon-wide submitted IP octets, not per-session directional accounting.
+The local journal retains 16 rows and reserves the final termination cell before granting; acknowledgements do not free retained capacity. Full/unavailable storage rejects new public grants while logout/expiry still revoke access. Rows are synced on the guest disk under `/var/lib/irongate-lab/local-records.jsonl`. Only the acknowledged prefix is promised: pending rows/crash termination can be lost. Recovery, rotation and durable billing are not implemented. Local audit byte snapshots remain daemon-wide submitted IP octets; the new separate accounting path uses per-session directional totals.
 
 ## Earlier Gate A evidence and checks
 

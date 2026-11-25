@@ -14,17 +14,16 @@ use std::{
 pub(crate) fn start(
     bridge: WorkerBridge,
     run_id: &str,
-) -> io::Result<irongate_core::session::Provider> {
+) -> io::Result<(
+    irongate_core::session::Provider,
+    crate::lab::accounting::Outbox,
+)> {
     let settings = super::config::Settings::load(std::path::Path::new(
         "/run/irongate-packet-lab/portal.toml",
     ))?;
-    let provider = if settings.radius.is_some() {
-        irongate_core::session::Provider::Radius
-    } else {
-        irongate_core::session::Provider::Consent
-    };
+    let (provider, accounting) = settings.owner_state()?;
     super::workers::start(bridge, run_id, settings)?;
-    Ok(provider)
+    Ok((provider, accounting))
 }
 
 pub(super) fn handle(

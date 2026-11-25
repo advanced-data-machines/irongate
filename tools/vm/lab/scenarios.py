@@ -80,7 +80,10 @@ def run(children, report):
     require(not fresh(children), "Upstream reachable without consent")
     require(control("status")["counters"]["denied"] > 0, "No userspace policy drop recorded")
     cases.append({"name": "unauthorized_transit_denied", "passed": True})
-    if report.get("radius"):
+    if report.get("accounting"):
+        import accounting_scenarios
+        accounting_scenarios.run(children,report)
+    elif report.get("radius"):
         import radius_scenarios
         radius_scenarios.run(children,report)
     elif report.get("portal"):

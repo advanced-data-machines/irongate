@@ -1,7 +1,7 @@
 //! Legacy RADIUS primitives from vetted RustCrypto implementations, not TLS.
 use hmac::{Hmac, Mac};
 use md5::{Digest, Md5};
-pub(super) fn digest(parts: &[&[u8]]) -> [u8; 16] {
+pub(crate) fn digest(parts: &[&[u8]]) -> [u8; 16] {
     let mut h = Md5::new();
     for bytes in parts {
         Digest::update(&mut h, bytes);

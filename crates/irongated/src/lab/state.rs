@@ -29,6 +29,7 @@ pub struct State<'a> {
     pub tokens: super::portal::Tokens,
     pub journal: super::portal::Journal,
     pub provider: session::Provider,
+    pub accounting: super::accounting::Outbox,
     pub authentication: super::radius::health::Health,
 }
 
@@ -48,6 +49,7 @@ impl<'a> State<'a> {
             journal: Default::default(),
             provider: session::Provider::Consent,
             authentication: Default::default(),
+            accounting: Default::default(),
         }
     }
 
@@ -66,7 +68,9 @@ impl<'a> State<'a> {
                 self.sessions.lease_lost(event.handle);
             }
         }
-        self.pump()
+        self.pump()?;
+        self.accounting.tick(now);
+        Ok(())
     }
 
     pub fn pump(&mut self) -> Result<(), String> {
@@ -98,6 +102,17 @@ impl<'a> State<'a> {
                         }
                         _ => super::portal::journal::Kind::Revoked,
                     };
+                    let cause = match reason {
+                        session::EndReason::Logout => 1,
+                        session::EndReason::AuthorizationExpired => 5,
+                        _ => 10,
+                    };
+                    self.accounting.stop(
+                        effect.token.session(),
+                        effect.lease,
+                        self.sessions.now(),
+                        cause,
+                    );
                     self.journal
                         .stop(self.sessions.now(), self.counters.forwarded_ip_bytes, kind);
                     if self.applied.is_some_and(|(handle, lease, _)| {

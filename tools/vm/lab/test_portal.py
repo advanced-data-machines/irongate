@@ -110,3 +110,35 @@ class RadiusEvidence(unittest.TestCase):
             elif change=="identity":guest["local_records"]["rows"][0]["run_id"]="b"*32
             else:guest["radius_packages"]=[]
             with self.subTest(change=change),self.assertRaises(ValueError):evidence.validate(guest,"a"*32,radius=True)
+
+
+class AccountingEvidence(unittest.TestCase):
+    def fixture(self):
+        guest=TLSEvidence().fixture();guest.update(schema=6,suite="radius-accounting-v1",radius_packages=["freeradius=test-version"])
+        guest["cases"]=[c for c in guest["cases"]if c["name"]not in evidence.PORTAL_CASES]+[{"name":name,"passed":True}for name in evidence.ACCOUNTING_CASES]
+        expected={"input":64*1028,"output":256*1228,"overflow":False}
+        guest["accounting_traffic"]={"count_point":"successfully_submitted_ip_octets","expected":expected,"up":{"ip_octets":expected["input"],"packets":64},"down":{"ip_octets":expected["output"],"packets":256}}
+        guest["accounting_idle"]={"current_octets":{"input":0,"output":0,"overflow":False},"acknowledged":2}
+        guest["accounting_outage"]={"new_login_http":503,"logout_seconds":.1,"before_logout":{"state":"unavailable"},"after_logout":{"retained_lifecycles":1,"pending":1}}
+        guest["accounting_recovery"]={"state":"responsive","retained_lifecycles":0,"last_acknowledged_octets":expected,"storage":"memory","crash_replay":False,"failed_attempts":1,"acknowledged":8}
+        guest["accounting_rows"]=[{"session_id":"unique-id","kind":kind,"input":expected["input"],"output":expected["output"],"identity_matches":True,"delay":2,"seconds":2}for kind in ("Start","Interim-Update","Stop")]
+        guest["accounting_final_rows"]=copy.deepcopy(guest["accounting_rows"])+[{"session_id":"second-id","kind":kind,"identity_matches":True}for kind in ("Start","Stop")]
+        guest["accounting_final"]={"retained_lifecycles":0,"state":"responsive","acknowledged":10}
+        return guest
+
+    def test_complete_accounting_contract(self):
+        evidence.validate(self.fixture(),"a"*32,accounting=True)
+
+    def test_contradictory_usage_identity_outage_or_crash_claim_cannot_pass(self):
+        for change in ("counter","identity","delay","outage","crash","idle","backend","case","reused"):
+            guest=self.fixture()
+            if change=="counter":guest["accounting_rows"][-1]["input"]+=1
+            elif change=="identity":guest["accounting_rows"][-1]["session_id"]="other-session"
+            elif change=="delay":guest["accounting_rows"][-1]["delay"]=0
+            elif change=="outage":guest["accounting_outage"]["after_logout"]["pending"]=0
+            elif change=="crash":guest["accounting_recovery"]["crash_replay"]=True
+            elif change=="idle":guest["accounting_idle"]["current_octets"]["input"]=1
+            elif change=="backend":guest["radius_packages"]=[]
+            elif change=="reused":guest["accounting_final_rows"][-1]["session_id"]="unique-id"
+            else:guest["cases"].pop()
+            with self.subTest(change=change),self.assertRaises(ValueError):evidence.validate(guest,"a"*32,accounting=True)

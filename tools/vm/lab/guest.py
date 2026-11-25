@@ -21,10 +21,11 @@ def main(run_id):
     report = {"schema": 2, "suite": "untagged-acceptance-v1", "scope": "isolated_packet_lab", "run_id": run_id,
               "status": "in_progress", "cases": [], "kernel": platform.release()}
     logs = []
-    if (WORK/"mode").read_text().strip()in ("portal","https","radius"):
+    if (WORK/"mode").read_text().strip()in ("portal","https","radius","accounting"):
         report.update({"schema":3,"suite":"local-consent-v1","portal":True})
     if portal_config.secure():report.update({"schema":4,"suite":"local-https-v1","https":True})
-    if (WORK/"mode").read_text().strip()=="radius":report.update({"schema":5,"suite":"radius-login-v1","radius":True})
+    if (WORK/"mode").read_text().strip()in ("radius","accounting"):report.update({"schema":5,"suite":"radius-login-v1","radius":True})
+    if (WORK/"mode").read_text().strip()=="accounting":report.update({"schema":6,"suite":"radius-accounting-v1","accounting":True})
     try:
         portal_config.configure(run_id)
         interfaces = json.loads(command("ip", "-j", "link").stdout)
@@ -35,7 +36,7 @@ def main(run_id):
         report["vcpus"] = os.cpu_count()
         report["packages"] = command("dpkg-query", "-W", "-f=${Package}=${Version}\n",
                                      "iproute2", "nftables", "busybox", "ethtool", "python3").stdout.splitlines()
-        report["topology"] = topology.prepare(created,portal_config.port(),portal_config.secure(),report.get("radius",False))
+        report["topology"] = topology.prepare(created,portal_config.port(),portal_config.secure(),report.get("radius",False),report.get("accounting",False))
         for namespace, host, port in [(UPSTREAM, "192.0.2.80", "80")]:
             log = (WORK / f"service-{port}.log").open("w")
             logs.append(log)

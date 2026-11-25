@@ -1,6 +1,6 @@
 # IronGate session accounting diagnostics
 
-`ig doctor` should make low throughput, unexpected usage totals and high-load degradation distinguishable. A high cumulative byte count and a low current rate are not inherently inconsistent: the measurements may cover different periods or different points in the packet path. Diagnose with aligned observations before assigning a cause. These commands and instrumentation are planned, not implemented.
+`ig doctor` should make low throughput, unexpected usage totals and high-load degradation distinguishable. A high cumulative byte count and a low current rate are not inherently inconsistent: the measurements may cover different periods or different points in the packet path. Diagnose with aligned observations before assigning a cause. The operator commands and full observation matrix remain planned. The [isolated accounting slice](radius-accounting.md) implements submitted directional counters, bounded RADIUS export, passive status and outage evidence; it does not yet implement runtime `ig doctor`.
 
 ## Operator workflow
 

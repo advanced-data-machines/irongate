@@ -54,6 +54,7 @@ fn trusted_https_reuses_typed_http_boundary_and_rejects_wrong_origin() {
                 endpoint: Endpoint::parse("https://10.50.10.1:8443").unwrap(),
                 tls: Some(config),
                 radius: None,
+                accounting: None,
             };
             let (sender, receiver) = mpsc::sync_channel::<crate::lab::portal::bridge::Envelope>(1);
             service::handle(

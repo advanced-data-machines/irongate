@@ -26,19 +26,20 @@ pub(super) fn start(bridge: WorkerBridge, run_id: &str, settings: Settings) -> i
     let file = writer::open()?;
     let listener = TcpListener::bind(settings.endpoint.address)?;
     let (connections, receiver) = mpsc::sync_channel::<Accepted>(4);
-    let receiver = Arc::new(Mutex::new(receiver));
     let metrics = Arc::new(Metrics::default());
+    crate::lab::accounting::worker::start(
+        settings.accounting.clone(),
+        bridge.accounting,
+        bridge.accounting_acks,
+        &bridge.wake,
+    )?;
     let worker = Arc::new(Worker {
         settings,
         metrics: Arc::clone(&metrics),
         sender: bridge.sender,
         wake: bridge.wake.try_clone()?,
     });
-    for _ in 0..2 {
-        let worker = Arc::clone(&worker);
-        let receiver = Arc::clone(&receiver);
-        thread::spawn(move || serve_queue(receiver, &worker));
-    }
+    start_http(worker, receiver);
     thread::spawn(move || accept(listener, connections, &metrics));
     let run_id = run_id.to_owned();
     thread::spawn(move || {
@@ -51,6 +52,14 @@ pub(super) fn start(bridge: WorkerBridge, run_id: &str, settings: Settings) -> i
         )
     });
     Ok(())
+}
+fn start_http(worker: Arc<Worker>, receiver: mpsc::Receiver<Accepted>) {
+    let receiver = Arc::new(Mutex::new(receiver));
+    for _ in 0..2 {
+        let worker = Arc::clone(&worker);
+        let receiver = Arc::clone(&receiver);
+        thread::spawn(move || serve_queue(receiver, &worker));
+    }
 }
 fn accept(listener: TcpListener, queue: mpsc::SyncSender<Accepted>, metrics: &Metrics) {
     for stream in listener.incoming() {

@@ -14,8 +14,13 @@ impl State<'_> {
         if peer.octets() != profile::CLIENT_IP {
             return Reply::Error(403, "This network session is unavailable.");
         }
-        if let Request::RadiusResult { attempt, decision } = request {
-            return self.radius_result(attempt, decision);
+        if let Request::RadiusResult {
+            attempt,
+            decision,
+            identity,
+        } = request
+        {
+            return self.radius_result(attempt, decision, identity);
         }
         let Some(handle) = self.active else {
             return Reply::Error(409, "Obtain a network address before opening the portal.");
@@ -31,7 +36,11 @@ impl State<'_> {
             return Reply::Error(409, "Network lease ended. Reconnect before continuing.");
         }
         match request {
-            Request::RadiusResult { attempt, decision } => self.radius_result(attempt, decision),
+            Request::RadiusResult {
+                attempt,
+                decision,
+                identity,
+            } => self.radius_result(attempt, decision, identity),
             Request::Act { action, token } => self.portal_action(handle, view.lease, action, token),
             Request::Script => Reply::Script,
             Request::Status | Request::View { .. } => {
@@ -65,6 +74,7 @@ impl State<'_> {
                     provider: self.provider,
                     policy_source: view.provider,
                     authentication: self.authentication,
+                    accounting: self.accounting.snapshot(self.sessions.now()),
                     phase: phase(view.phase),
                     now: self.sessions.now(),
                     allowed,
@@ -78,7 +88,7 @@ impl State<'_> {
                     pending_age: self.journal.pending_age(self.sessions.now()),
                     record_capacity: CAPACITY,
                     ip_bytes: self.counters.forwarded_ip_bytes,
-                    admission_available: self.journal.can_admit(),
+                    admission_available: self.journal.can_admit() && self.accounting.can_admit(),
                 })
             }
         }

@@ -17,7 +17,10 @@ TLS_CASES=frozenset({"tls_certificate_validation_and_no_http_fallback","tls_hand
 
 RADIUS_CASES=frozenset({"browser_radius_accept_and_logout","radius_reject_and_session_timeout","radius_unsupported_policy_denied","radius_no_consent_fallback_or_replay","radius_protocol_faults_deny_and_report","radius_late_result_cannot_authorize_reused_lease","radius_backend_recovery"})
 
-def validate(guest, run_id,portal=False,https=False,radius=False):
+ACCOUNTING_CASES=frozenset({"accounting_start_and_idle_interim","accounting_directional_octets_low_rate_and_burst","accounting_outage_retains_stop_and_logout_is_immediate","accounting_backend_identity_totals_and_recovery","accounting_reauthentication_uses_new_identity"})
+
+def validate(guest, run_id,portal=False,https=False,radius=False,accounting=False):
+    if accounting:radius=True
     if radius:https=True
     if https:portal=True
     schema,suite=(3,"local-consent-v1")if portal else(2,"untagged-acceptance-v1")
@@ -25,6 +28,9 @@ def validate(guest, run_id,portal=False,https=False,radius=False):
     if radius:schema,suite=5,"radius-login-v1"
     expected=(CASES|PORTAL_CASES|TLS_CASES)if https else CASES|PORTAL_CASES if portal else CASES
     if radius:expected=CASES|TLS_CASES|RADIUS_CASES
+    if accounting:
+        schema,suite=6,"radius-accounting-v1"
+        expected=CASES|TLS_CASES|ACCOUNTING_CASES
     if (guest.get("schema") != schema or guest.get("suite") != suite or guest.get("scope") != "isolated_packet_lab"
             or guest.get("run_id") != run_id or guest.get("status") != "passed"):
         raise ValueError("Guest result identity/status does not match this run")
@@ -57,7 +63,8 @@ def validate(guest, run_id,portal=False,https=False,radius=False):
     if (ipv6.get("kernel_forwarding") != 1 or ipv6.get("forward_drop_delta", 0) < 1
             or ipv6.get("ingress_received", 0) < 1 or ipv6.get("upstream_received") != 0):
         raise ValueError("IPv6 kernel bypass guard was not independently exercised")
-    if radius:validate_radius(guest,run_id,namespaces)
+    if accounting:validate_accounting(guest,namespaces)
+    elif radius:validate_radius(guest,run_id,namespaces)
     elif portal:validate_portal(guest,run_id,namespaces)
     if https:validate_tls(guest)
 
@@ -113,3 +120,47 @@ def validate_radius(guest,run_id,namespaces):
     if [row.get("id")for row in rows]!=list(range(1,7)) or any(row.get("provider")!="radius" or row.get("network")!=1 or row.get("run_id")!=run_id for row in rows):raise ValueError("Authentication audit identity mismatch")
     if [row.get("kind")for row in rows]!=["Granted","Revoked","Granted","Expired","Granted","Revoked"]:raise ValueError("Authentication audit lifecycle mismatch")
     if not guest.get("radius_packages"):raise ValueError("Backend version evidence missing")
+
+
+def validate_accounting(guest,namespaces):
+    browser=guest.get("browser",{})
+    if browser.get("namespace")!=namespaces["iglab-client"] or browser.get("transport")!="devtools_pipe" or not guest.get("radius_packages"):
+        raise ValueError("Accounting browser/backend evidence missing")
+    traffic=guest.get("accounting_traffic",{});expected=traffic.get("expected",{})
+    if (traffic.get("count_point")!="successfully_submitted_ip_octets" or expected!={"input":64*1028,"output":256*1228,"overflow":False}
+            or traffic.get("up")!={"ip_octets":expected["input"],"packets":64} or traffic.get("down")!={"ip_octets":expected["output"],"packets":256}):
+        raise ValueError("Independent directional octet evidence missing")
+    idle=guest.get("accounting_idle",{})
+    if idle.get("current_octets")!={"input":0,"output":0,"overflow":False} or idle.get("acknowledged",0)<2:
+        raise ValueError("Idle timer/native traffic exclusion evidence missing")
+    outage=guest.get("accounting_outage",{});backlog=outage.get("after_logout",{})
+    if (outage.get("new_login_http")!=503 or not 0<=outage.get("logout_seconds",99)<1 or outage.get("before_logout",{}).get("state")!="unavailable"
+            or backlog.get("retained_lifecycles")!=1 or backlog.get("pending",0)<1):raise ValueError("Outage/revocation evidence missing")
+    recovery=guest.get("accounting_recovery",{})
+    if (recovery.get("state")!="responsive" or recovery.get("retained_lifecycles")!=0 or recovery.get("last_acknowledged_octets")!=expected
+            or recovery.get("storage")!="memory" or recovery.get("crash_replay")is not False or recovery.get("failed_attempts",0)<1):
+        raise ValueError("Recovery/crash scope evidence missing")
+    rows=guest.get("accounting_rows",[])
+    if (len(rows)<3 or len({r.get("session_id")for r in rows})!=1 or any(not r.get("identity_matches")for r in rows)
+            or rows[0].get("kind")!="Start" or rows[-1].get("kind")!="Stop" or not any(r.get("kind")=="Interim-Update"for r in rows)):
+        raise ValueError("Backend lifecycle identity/order missing")
+    if any(r.get("input")!=expected["input"] or r.get("output")!=expected["output"]for r in rows if r.get("kind")=="Stop") or rows[-1].get("delay",0)<1:
+        raise ValueError("Backend final usage/delay mismatch")
+    final=guest.get("accounting_final",{})
+    if final.get("retained_lifecycles")!=0 or final.get("state")!="responsive" or final.get("acknowledged",0)<=recovery.get("acknowledged",0):
+        raise ValueError("Reauthentication/drain evidence missing")
+
+    previous=(0,0,0)
+    for row in rows:
+        current=(row.get("input",-1),row.get("output",-1),row.get("seconds",-1))
+        if (any(value<prior for value,prior in zip(current,previous)) or current[0]>expected["input"] or current[1]>expected["output"]):
+            raise ValueError("Backend cumulative snapshots are inconsistent")
+        previous=current
+    final_rows=guest.get("accounting_final_rows",[])
+    session_ids={r.get("session_id")for r in final_rows}
+    if len(session_ids)!=2 or None in session_ids or not set(r["session_id"]for r in rows)<=session_ids:
+        raise ValueError("Reauthentication reused or lost backend identity")
+    for identity in session_ids:
+        lifecycle=[r for r in final_rows if r.get("session_id")==identity]
+        if lifecycle[0].get("kind")!="Start" or lifecycle[-1].get("kind")!="Stop" or any(r.get("identity_matches")is not True for r in lifecycle):
+            raise ValueError("Final backend lifecycle is incomplete")

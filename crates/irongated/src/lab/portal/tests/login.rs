@@ -68,6 +68,7 @@ fn accepted_results_apply_radius_policy_and_cancelled_results_cannot_grant() {
         s.portal_request(
             profile::CLIENT_IP.into(),
             Request::RadiusResult {
+                identity: None,
                 attempt: old,
                 decision: decision(Outcome::Accept { seconds: 5 })
             }
@@ -79,6 +80,7 @@ fn accepted_results_apply_radius_policy_and_cancelled_results_cannot_grant() {
         s.portal_request(
             profile::CLIENT_IP.into(),
             Request::RadiusResult {
+                identity: None,
                 attempt: current,
                 decision: decision(Outcome::Accept { seconds: 5 })
             }
@@ -113,7 +115,7 @@ fn valid_reject_is_responsive_but_invalid_and_timed_out_attempts_are_not_healthy
     {
         let attempt = begin(&mut s, index as u8 + 1);
         assert!(
-            matches!(s.portal_request(profile::CLIENT_IP.into(),Request::RadiusResult{attempt,decision:decision(outcome)}),Reply::Error(c,_)if c==code)
+            matches!(s.portal_request(profile::CLIENT_IP.into(),Request::RadiusResult{identity:None,attempt,decision:decision(outcome)}),Reply::Error(c,_)if c==code)
         );
         assert!(!s.allowed());
         let health = s.authentication.status(true, s.sessions.now());

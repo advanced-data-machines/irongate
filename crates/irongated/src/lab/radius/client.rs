@@ -23,7 +23,7 @@ pub(crate) fn authenticate(config: &Config, credentials: &Credentials) -> Decisi
         sends: 0,
     })
 }
-trait Channel {
+pub(crate) trait Channel {
     fn send(&self, bytes: &[u8]) -> io::Result<usize>;
     fn receive(&self, bytes: &mut [u8], timeout: Duration) -> io::Result<usize>;
 }

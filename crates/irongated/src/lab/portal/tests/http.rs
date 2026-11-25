@@ -111,6 +111,7 @@ fn worker_only_sends_typed_requests_and_has_a_bounded_busy_response() {
             endpoint: super::super::config::Endpoint::http(),
             tls: None,
             radius: None,
+            accounting: None,
         },
         &super::super::metrics::Metrics::default(),
     )
@@ -133,6 +134,7 @@ fn worker_only_sends_typed_requests_and_has_a_bounded_busy_response() {
             endpoint: super::super::config::Endpoint::http(),
             tls: None,
             radius: None,
+            accounting: None,
         },
         &super::super::metrics::Metrics::default(),
     )

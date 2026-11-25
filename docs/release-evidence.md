@@ -86,3 +86,10 @@ Release evidence must describe a clean, frozen commit. A dirty-tree run is usefu
 - Publish only claims supported by the retained workload and environment. Offline allocation/helper comparisons do not establish live throughput, interoperability, RADIUS health or production stability.
 
 The [performance/stability criteria](performance-stability.md), [comparison framework](comparison-framework.md), [lease evidence](lease-core.md) and [MVP acceptance gates](mvp-plan.md) define the supporting scopes. Numerical live-performance targets must still be ratified and measured before they become launch claims.
+
+
+## RADIUS accounting development checkpoint
+
+The [accounting slice](radius-accounting.md) adds a separate schema-6 `radius-accounting-v1` contract: 18 cases combine five accounting scenarios, eleven packet/guard cases and two HTTPS cases. Real FreeRADIUS detail records establish cumulative identity/totals independently of client acknowledgment; a deliberate lost-response interval distinguishes sink receipt from acknowledgment and verifies immediate logout, retained Stop and recovery. The original schema-5 login regression remains independent.
+
+Ordinary verification passes **161 Rust tests**, **22 lab/evidence tests** and **16 comparison regressions**. Full CRAP reports analyze **342 functions**, with only the preexisting CLI parser above 30 (39.32). No new Cargo dependencies were added. Native serving/bootstrap coverage is still incomplete. Development run `122c603d251af060f6bb05cce7532238` passed all cases on dirty source, before final status/module refinements. Do not substitute it for clean runtime evidence. Volatile outbox/crash limits remain explicit; independent backend protocol receipt is not a durable billing guarantee.
