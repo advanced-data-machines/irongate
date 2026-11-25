@@ -4,44 +4,43 @@ use super::{
     page,
     protocol::{self, Parsed},
 };
-use rustix::rand::{GetRandomFlags, getrandom};
 use std::{
     io::{self, Read},
     net::Ipv4Addr,
-    sync::mpsc::{self, SyncSender},
+    sync::mpsc::SyncSender,
     time::{Duration, Instant},
 };
 
-pub(crate) fn start(bridge: WorkerBridge, run_id: &str) -> io::Result<()> {
+pub(crate) fn start(
+    bridge: WorkerBridge,
+    run_id: &str,
+) -> io::Result<irongate_core::session::Provider> {
     let settings = super::config::Settings::load(std::path::Path::new(
         "/run/irongate-packet-lab/portal.toml",
     ))?;
-    super::workers::start(bridge, run_id, settings)
+    let provider = if settings.radius.is_some() {
+        irongate_core::session::Provider::Radius
+    } else {
+        irongate_core::session::Provider::Consent
+    };
+    super::workers::start(bridge, run_id, settings)?;
+    Ok(provider)
 }
 
 pub(super) fn handle(
     stream: &mut impl super::transport::RequestStream,
     peer: Ipv4Addr,
     sender: &SyncSender<Envelope>,
-    notify: impl FnOnce(),
-    endpoint: &super::config::Endpoint,
+    notify: impl Fn(),
+    settings: &super::config::Settings,
     metrics: &super::metrics::Metrics,
 ) -> io::Result<()> {
-    let result = read_request(stream, endpoint).and_then(|(request, html)| {
-        let (reply, receiver) = mpsc::sync_channel(1);
-        sender
-            .try_send(Envelope {
-                peer,
-                request,
-                reply,
-            })
-            .map_err(|_| 503u16)?;
-        notify();
-        receiver
-            .recv_timeout(Duration::from_secs(2))
-            .map(|reply| (reply, html))
-            .map_err(|_| 503u16)
-    });
+    let result =
+        read_request(stream, &settings.endpoint).and_then(|(request, html, credentials)| {
+            let reply = super::login::ask(sender, peer, request, &notify)?;
+            super::login::complete(reply, credentials, settings, peer, sender, notify)
+                .map(|reply| (reply, html))
+        });
     let (mut reply, html) = result.unwrap_or_else(|code| {
         (
             Reply::Error(code, "Request could not be completed. Reload the portal."),
@@ -49,7 +48,7 @@ pub(super) fn handle(
         )
     });
     if let Reply::View(view) = &mut reply {
-        view.transport = Some(metrics.snapshot(endpoint.secure));
+        view.transport = Some(metrics.snapshot(settings.endpoint.secure));
     }
     stream.begin_response();
     stream.write_all(&page::response(reply, html))?;
@@ -58,14 +57,25 @@ pub(super) fn handle(
 fn read_request(
     stream: &mut impl Read,
     endpoint: &super::config::Endpoint,
-) -> Result<(super::bridge::Request, bool), u16> {
-    let entropy = entropy().map_err(|_| 503u16)?;
+) -> Result<
+    (
+        super::bridge::Request,
+        bool,
+        Option<crate::lab::radius::credentials::Credentials>,
+    ),
+    u16,
+> {
+    let entropy = crate::lab::entropy::bytes().map_err(|_| 503u16)?;
     let start = Instant::now();
-    let mut input = [0; protocol::MAX_REQUEST];
+    let mut input = zeroize::Zeroizing::new([0; protocol::MAX_REQUEST]);
     let mut used = 0;
     loop {
         match protocol::parse(&input[..used], entropy, endpoint)? {
-            Parsed::Ready { request, html } => return Ok((request, html)),
+            Parsed::Ready {
+                request,
+                html,
+                credentials,
+            } => return Ok((request, html, credentials)),
             Parsed::Incomplete => (),
         }
         if used == input.len() {
@@ -90,22 +100,4 @@ fn read_request(
             Err(_) => return Err(400),
         }
     }
-}
-fn entropy() -> io::Result<[u8; 32]> {
-    let mut value = [0; 32];
-    let mut used = 0;
-    for _ in 0..8 {
-        match getrandom(&mut value[used..], GetRandomFlags::NONBLOCK) {
-            Ok(0) => break,
-            Ok(length) => {
-                used += length;
-                if used == value.len() {
-                    return Ok(value);
-                }
-            }
-            Err(rustix::io::Errno::INTR) => continue,
-            Err(error) => return Err(error.into()),
-        }
-    }
-    Err(io::Error::other("OS entropy unavailable"))
 }

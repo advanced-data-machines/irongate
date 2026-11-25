@@ -87,3 +87,26 @@ class TLSEvidence(unittest.TestCase):
             else:guest["browser"]["certificate_verification"]="disabled"
             with self.subTest(change=change),self.assertRaises(ValueError):
                 evidence.validate(guest,"a"*32,https=True)
+
+class RadiusEvidence(unittest.TestCase):
+    def fixture(self):
+        guest=TLSEvidence().fixture();guest.update(schema=5,suite="radius-login-v1")
+        guest["cases"]=[c for c in guest["cases"]if c["name"]not in evidence.PORTAL_CASES]+[{"name":name,"passed":True}for name in evidence.RADIUS_CASES]
+        guest["radius_faults"]={"http":{"bad_auth":502,"bad_ma":502,"missing_ma":502,"wrong_id":502,"length":502,"wrong_source":503,"timeout":503,"challenge":422}}
+        guest["radius_late"]={"http":409,"old_generation":1,"new_generation":2}
+        guest["radius_auth"]={"health":"responsive","access_accepts":3,"access_rejects":1,"accounting":"not_implemented"}
+        guest["radius_packages"]=["freeradius=test-version"]
+        guest["local_records"]={"capacity":16,"durable":6,"retained":6,"scope":"local_audit_not_radius_accounting","rows":[{"id":i,"network":1,"run_id":"a"*32,"provider":"radius","kind":kind}for i,kind in enumerate(["Granted","Revoked","Granted","Expired","Granted","Revoked"],1)]}
+        return guest
+
+    def test_complete_login_contract_requires_tls_and_scoped_local_audit(self):
+        evidence.validate(self.fixture(),"a"*32,radius=True)
+        for change in ("tls","source","stale","accounting","identity","backend"):
+            guest=self.fixture()
+            if change=="tls":guest["browser"]["certificate_verification"]="disabled"
+            elif change=="source":guest["local_records"]["rows"][0]["provider"]="consent"
+            elif change=="stale":guest["radius_late"]["new_generation"]=1
+            elif change=="accounting":guest["radius_auth"]["accounting"]="healthy"
+            elif change=="identity":guest["local_records"]["rows"][0]["run_id"]="b"*32
+            else:guest["radius_packages"]=[]
+            with self.subTest(change=change),self.assertRaises(ValueError):evidence.validate(guest,"a"*32,radius=True)

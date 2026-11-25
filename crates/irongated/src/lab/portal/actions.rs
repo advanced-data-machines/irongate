@@ -14,6 +14,9 @@ impl State<'_> {
         if peer.octets() != profile::CLIENT_IP {
             return Reply::Error(403, "This network session is unavailable.");
         }
+        if let Request::RadiusResult { attempt, decision } = request {
+            return self.radius_result(attempt, decision);
+        }
         let Some(handle) = self.active else {
             return Reply::Error(409, "Obtain a network address before opening the portal.");
         };
@@ -28,15 +31,21 @@ impl State<'_> {
             return Reply::Error(409, "Network lease ended. Reconnect before continuing.");
         }
         match request {
+            Request::RadiusResult { attempt, decision } => self.radius_result(attempt, decision),
             Request::Act { action, token } => self.portal_action(handle, view.lease, action, token),
             Request::Script => Reply::Script,
             Request::Status | Request::View { .. } => {
                 let allowed = self.allowed();
                 let action = if let Request::View { entropy } = request {
-                    let action = if allowed {
+                    let action = if allowed || view.phase == session::Phase::AwaitingAuthentication
+                    {
                         Action::Logout
                     } else {
-                        Action::Consent
+                        if self.provider == session::Provider::Radius {
+                            Action::Login
+                        } else {
+                            Action::Consent
+                        }
                     };
                     let Some((token, until)) =
                         self.tokens
@@ -53,6 +62,9 @@ impl State<'_> {
                 };
                 Reply::View(Snapshot {
                     transport: None,
+                    provider: self.provider,
+                    policy_source: view.provider,
+                    authentication: self.authentication,
                     phase: phase(view.phase),
                     now: self.sessions.now(),
                     allowed,
@@ -79,6 +91,11 @@ impl State<'_> {
         action: Action,
         token: [u8; 32],
     ) -> Reply {
+        if (action == Action::Consent && self.provider != session::Provider::Consent)
+            || (action == Action::Login && self.provider != session::Provider::Radius)
+        {
+            return Reply::Error(403, "This authentication method is not enabled.");
+        }
         if !self
             .tokens
             .consume(token, handle, lease, action, self.sessions.now())
@@ -90,6 +107,7 @@ impl State<'_> {
         }
         self.tokens.invalidate();
         match action {
+            Action::Login => return self.begin_radius(handle),
             Action::Consent => {
                 if !self.journal.can_admit() {
                     return Reply::Error(
@@ -104,19 +122,7 @@ impl State<'_> {
                 if result.is_err() {
                     return Reply::Error(409, "Session changed. Reload the portal.");
                 }
-                if self.pump().is_err() || !self.allowed() {
-                    self.applied = None;
-                    return Reply::Error(503, "Access could not be applied. Please retry.");
-                }
-                assert!(
-                    self.journal.grant(
-                        handle,
-                        lease,
-                        self.sessions.now(),
-                        self.counters.forwarded_ip_bytes
-                    ),
-                    "single owner reserved two record cells before applying"
-                );
+                return self.finish_admission(handle, lease);
             }
             Action::Logout => {
                 if self.sessions.logout(handle).is_err() || self.pump().is_err() {
@@ -132,6 +138,7 @@ fn phase(phase: session::Phase) -> &'static str {
     match phase {
         session::Phase::Leased => "Leased",
         session::Phase::AwaitingConsent => "AwaitingConsent",
+        session::Phase::AwaitingAuthentication => "AwaitingAuthentication",
         session::Phase::Applying => "Applying",
         session::Phase::Authorized => "Authorized",
         session::Phase::Revoking => "Revoking",

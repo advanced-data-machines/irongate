@@ -8,20 +8,28 @@ use super::{
 use serde_json::{Value, json};
 
 pub(super) fn status(view: Snapshot) -> Value {
-    json!({"scope":"local_lab_consent","hosting":"local","provider":"consent","network":1,
+    json!({"scope":"local_lab_consent","hosting":"local","provider":if view.provider==irongate_core::session::Provider::Radius{"radius"}else{"consent"},
+        "policy_source":view.policy_source.map(|p|match p{irongate_core::session::Provider::Consent=>"consent",irongate_core::session::Provider::Radius=>"radius"}),
+        "authentication":view.authentication.status(view.provider==irongate_core::session::Provider::Radius,view.now),"network":1,
         "transport":view.transport.map(|h|json!({"scheme":if h.secure{"https"}else{"http"},"tls_handshakes":h.completed,"tls_failures":h.failed,"tls_timeouts":h.timed_out,"accepted":h.accepted,"queue_rejections":h.busy})),
         "phase":view.phase,"now":view.now,"allowed":view.allowed,"generation":view.generation,"until":view.until,
         "forwarded_ip_bytes":view.ip_bytes,"admission_available":view.admission_available,
         "records":{"retained":view.records,"durable":view.durable,"pending":view.records-view.durable,
             "write_failures":view.record_failures,"capacity":view.record_capacity,"stalled":view.record_stalled,
             "oldest_pending_seconds":view.pending_age,"crash_guarantee":"acknowledged_prefix_only"},
-        "action":view.action.map(|(kind,token,until)|json!({"kind":if kind==Action::Consent{"consent"}else{"logout"},"token":encode(token),"expires_at":until}))})
+        "action":view.action.map(|(kind,token,until)|json!({"kind":match kind{Action::Consent=>"consent",Action::Login=>"login",Action::Logout=>"logout"},"token":encode(token),"expires_at":until}))})
 }
 
 pub(super) fn response(reply: Reply, html: bool) -> Vec<u8> {
     let (code, kind, body, location) = match reply {
         Reply::View(view) if html => (200, "text/html; charset=utf-8", render(view), false),
         Reply::View(view) => (200, "application/json", status(view).to_string(), false),
+        Reply::Authenticate { .. } => (
+            500,
+            "application/json",
+            r#"{"error":"Internal authentication boundary failure"}"#.to_owned(),
+            false,
+        ),
         Reply::Script => (
             200,
             "text/javascript; charset=utf-8",
@@ -55,13 +63,18 @@ pub(super) fn response(reply: Reply, html: bool) -> Vec<u8> {
 }
 
 fn render(view: Snapshot) -> String {
+    let radius = view.provider == irongate_core::session::Provider::Radius;
     let title = if view.allowed {
         "You’re connected"
+    } else if radius {
+        "Sign in to the network"
     } else {
         "Welcome to the network"
     };
     let explanation = if view.allowed {
         "Your temporary network access is active. You can end it at any time."
+    } else if radius {
+        "Use your network account to connect. Your sign-in is protected by HTTPS."
     } else {
         "Accept the test network terms to connect. No personal login is required."
     };
@@ -69,16 +82,30 @@ fn render(view: Snapshot) -> String {
         Some((kind, token, _)) => {
             let (path, label) = if kind == Action::Consent {
                 ("consent", "Accept and connect")
+            } else if kind == Action::Login {
+                ("login", "Sign in")
             } else {
-                ("logout", "Disconnect")
+                (
+                    "logout",
+                    if view.phase == "AwaitingAuthentication" {
+                        "Cancel sign-in"
+                    } else {
+                        "Disconnect"
+                    },
+                )
             };
-            let disabled = if kind == Action::Consent && !view.admission_available {
+            let disabled = if kind != Action::Logout && !view.admission_available {
                 " disabled"
             } else {
                 ""
             };
+            let fields = if kind == Action::Login {
+                r#"<label>Username<input name=username autocomplete=username maxlength=64 required></label><label>Password<input type=password name=password autocomplete=current-password maxlength=128 required></label>"#
+            } else {
+                ""
+            };
             format!(
-                "<form method=post action=/{path}><input type=hidden name=token value=\"{}\"><button{disabled}>{label}</button></form>",
+                "<form method=post action=/{path}><input type=hidden name=token value=\"{}\">{fields}<button{disabled}>{label}</button></form>",
                 encode(token)
             )
         }
@@ -89,8 +116,18 @@ fn render(view: Snapshot) -> String {
     } else {
         ""
     };
+    let section_title = if radius {
+        "Network access policy"
+    } else {
+        "Test network terms"
+    };
+    let terms = if radius {
+        "Access is temporary and subject to your network account policy."
+    } else {
+        "Please use this test network responsibly. Access is temporary; accepting these terms does not verify a person’s identity."
+    };
     format!(
-        "<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content=\"width=device-width, initial-scale=1\"><title>IronGate — Network access</title><script src=/portal.js defer></script><style>{}</style><body data-allowed={}><main><header>IronGate <span>LOCAL NETWORK</span></header><div class=badge>{}</div><h1>{title}</h1><p>{explanation}</p><section><h2>Test network terms</h2><p>Please use this test network responsibly. Access is temporary; accepting these terms does not verify a person’s identity.</p></section>{warning}{form}<footer>Session {} · {}<br><span id=records>Local records: {} retained, {} saved.</span> Unacknowledged records can be lost on a crash.<br>Refresh this page if an action expires.</footer></main></html>",
+        "<!doctype html><html lang=en><meta charset=utf-8><meta name=viewport content=\"width=device-width, initial-scale=1\"><title>IronGate — Network access</title><script src=/portal.js defer></script><style>{}</style><body data-allowed={}><main><header>IronGate <span>LOCAL NETWORK</span></header><div class=badge>{}</div><h1>{title}</h1><p>{explanation}</p><section><h2>{section_title}</h2><p>{terms}</p></section>{warning}{form}<footer>Session {} · {}<br><span id=records>Local records: {} retained, {} saved.</span> Unacknowledged records can be lost on a crash.<br>Refresh this page if an action expires.</footer></main></html>",
         include_str!("portal.css"),
         view.allowed,
         if view.allowed {

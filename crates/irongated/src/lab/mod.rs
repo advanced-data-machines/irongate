@@ -14,3 +14,6 @@ pub use io::run;
 
 #[cfg(test)]
 mod tests;
+
+mod entropy;
+mod radius;

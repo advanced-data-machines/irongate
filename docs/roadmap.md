@@ -120,3 +120,5 @@ Keep captured credentials and subscriber identifiers out of source control. The 
 The next implementation sequence is the [HTTPS/RADIUS checkpoint plan](https-radius-plan.md), including the proposed Linux/static-musl compatibility matrix. Gate A and acceptance changes are integrated into `release/0.1.x` through `5695c36`; broader deployment and scale support remain unqualified.
 
 HTTPS consent is implemented on `feature/portal-https` with static musl builds, explicit TLS configuration and verified browser/failure/pressure evidence; see [checkpoint limits](portal-https.md). Review/integrate it before the provider/configuration boundary. Gate B remains pending.
+
+The [lab-alpha finish line](lab-alpha.md) separates a bounded RADIUS-backed evaluation from the larger MVP. HTTPS is integrated at `d119adf`; the [authentication slice](radius-login.md) implements the narrow provider/configuration boundary and first backend. Accounting and operational/demo integration remain before alpha completion. Dedicated-appliance qualification follows on an isolated test LAN.

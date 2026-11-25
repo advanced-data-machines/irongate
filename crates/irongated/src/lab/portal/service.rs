@@ -16,7 +16,7 @@ pub(super) fn handle<T: TimedIo>(
     peer: Ipv4Addr,
     settings: &Settings,
     sender: &SyncSender<Envelope>,
-    notify: impl FnOnce(),
+    notify: impl Fn(),
     metrics: &Metrics,
 ) -> io::Result<()> {
     if let Some(config) = &settings.tls {
@@ -31,25 +31,11 @@ pub(super) fn handle<T: TimedIo>(
             return Err(error);
         }
         metrics.completed.fetch_add(1, Relaxed);
-        server::handle(
-            &mut stream,
-            peer,
-            sender,
-            notify,
-            &settings.endpoint,
-            metrics,
-        )?;
+        server::handle(&mut stream, peer, sender, notify, settings, metrics)?;
         stream.conn.send_close_notify();
         std::io::Write::flush(&mut stream)
     } else {
         let mut stream = socket;
-        server::handle(
-            &mut stream,
-            peer,
-            sender,
-            notify,
-            &settings.endpoint,
-            metrics,
-        )
+        server::handle(&mut stream, peer, sender, notify, settings, metrics)
     }
 }

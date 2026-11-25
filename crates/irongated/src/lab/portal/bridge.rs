@@ -9,10 +9,19 @@ use std::{
 
 #[derive(Clone, Copy)]
 pub(crate) enum Request {
-    View { entropy: [u8; 32] },
+    View {
+        entropy: [u8; 32],
+    },
     Status,
     Script,
-    Act { action: Action, token: [u8; 32] },
+    Act {
+        action: Action,
+        token: [u8; 32],
+    },
+    RadiusResult {
+        attempt: irongate_core::session::Attempt,
+        decision: crate::lab::radius::Decision,
+    },
 }
 
 pub(crate) struct Envelope {
@@ -24,6 +33,9 @@ pub(crate) struct Envelope {
 #[derive(Clone, Copy)]
 pub(crate) struct Snapshot {
     pub phase: &'static str,
+    pub provider: irongate_core::session::Provider,
+    pub policy_source: Option<irongate_core::session::Provider>,
+    pub authentication: crate::lab::radius::health::Health,
     pub transport: Option<super::metrics::Health>,
     pub now: u64,
     pub allowed: bool,
@@ -41,9 +53,16 @@ pub(crate) struct Snapshot {
 }
 
 #[derive(Clone, Copy)]
+#[allow(
+    clippy::large_enum_variant,
+    reason = "Inline snapshots avoid owner-side heap allocation; the request/reply queues have fixed capacity."
+)]
 pub(crate) enum Reply {
     View(Snapshot),
     Redirect,
+    Authenticate {
+        attempt: irongate_core::session::Attempt,
+    },
     Script,
     Error(u16, &'static str),
 }

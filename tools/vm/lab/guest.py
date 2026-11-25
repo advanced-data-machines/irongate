@@ -21,9 +21,10 @@ def main(run_id):
     report = {"schema": 2, "suite": "untagged-acceptance-v1", "scope": "isolated_packet_lab", "run_id": run_id,
               "status": "in_progress", "cases": [], "kernel": platform.release()}
     logs = []
-    if (WORK/"mode").read_text().strip()in ("portal","https"):
+    if (WORK/"mode").read_text().strip()in ("portal","https","radius"):
         report.update({"schema":3,"suite":"local-consent-v1","portal":True})
     if portal_config.secure():report.update({"schema":4,"suite":"local-https-v1","https":True})
+    if (WORK/"mode").read_text().strip()=="radius":report.update({"schema":5,"suite":"radius-login-v1","radius":True})
     try:
         portal_config.configure(run_id)
         interfaces = json.loads(command("ip", "-j", "link").stdout)
@@ -34,7 +35,7 @@ def main(run_id):
         report["vcpus"] = os.cpu_count()
         report["packages"] = command("dpkg-query", "-W", "-f=${Package}=${Version}\n",
                                      "iproute2", "nftables", "busybox", "ethtool", "python3").stdout.splitlines()
-        report["topology"] = topology.prepare(created,portal_config.port(),portal_config.secure())
+        report["topology"] = topology.prepare(created,portal_config.port(),portal_config.secure(),report.get("radius",False))
         for namespace, host, port in [(UPSTREAM, "192.0.2.80", "80")]:
             log = (WORK / f"service-{port}.log").open("w")
             logs.append(log)
@@ -44,6 +45,10 @@ def main(run_id):
         logs.append(log)
         children.append(spawn("python3", "/opt/irongate-lab/supervisor.py", run_id,
                               namespace=GATEWAY, stdout=log, stderr=log))
+        if report.get("radius"):
+            import radius_backend
+            report["radius_packages"]=command("dpkg-query","-W","-f=${Package}=${Version}\n","freeradius","freeradius-utils").stdout.splitlines()
+            report["radius_process"]=radius_backend.start(children).pid
         time.sleep(0.2)
         scenarios.run(children, report)
         report["status"] = "passed"
@@ -79,6 +84,9 @@ def main(run_id):
         if report["cleanup_errors"]:
             report["status"] = "failed"
         report["logs"] = {p.name: p.read_text(errors="replace")[-8000:] for p in WORK.glob("*.log")}
+        if report.get("radius") and (WORK/"radius/secret").exists():
+            secret=(WORK/"radius/secret").read_text().strip()
+            report["logs"]={name:content.replace(secret,"<redacted>").replace("lab-pass","<test-password>")for name,content in report["logs"].items()}
         if report.get("portal"):
             report["screenshots"]=artifacts.export(WORK,run_id)
         print("IG_LAB_RESULT " + json.dumps(report, separators=(",", ":")), flush=True)

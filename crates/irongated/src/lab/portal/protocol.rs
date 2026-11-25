@@ -1,11 +1,19 @@
 //! Strict bounded HTTP framing through httparse; no permissive second parser.
 
-use super::{bridge::Request, tokens::Action};
+use super::bridge::Request;
 pub(super) const MAX_REQUEST: usize = 8192;
 
+#[allow(
+    clippy::large_enum_variant,
+    reason = "Bounded credentials remain inline and cleared on drop, without a heap indirection per parsed request."
+)]
 pub(super) enum Parsed {
     Incomplete,
-    Ready { request: Request, html: bool },
+    Ready {
+        request: Request,
+        html: bool,
+        credentials: Option<crate::lab::radius::credentials::Credentials>,
+    },
 }
 
 pub(super) fn parse(
@@ -25,14 +33,15 @@ pub(super) fn parse(
     if parsed.version != Some(1) {
         return Err(400);
     }
-    let super::headers::Headers {
-        accept_html,
-        origin,
-        content_length,
-        content_type,
-    } = super::headers::check(parsed.headers, &endpoint.authority)?;
-    let body_len = content_length.unwrap_or(0);
-    if body_len > 128 {
+    let headers = super::headers::check(parsed.headers, &endpoint.authority)?;
+    let body_len = headers.content_length.unwrap_or(0);
+    if body_len
+        > if parsed.path == Some("/login") {
+            768
+        } else {
+            128
+        }
+    {
         return Err(413);
     }
     let required = length.checked_add(body_len).ok_or(413u16)?;
@@ -42,43 +51,14 @@ pub(super) fn parse(
     if bytes.len() != required {
         return Err(400);
     }
-    match (parsed.method, parsed.path) {
-        (Some("GET"), Some("/" | "/api/action")) if body_len == 0 => Ok(Parsed::Ready {
-            request: Request::View { entropy },
-            html: parsed.path == Some("/"),
-        }),
-        (Some("GET"), Some("/status")) if body_len == 0 => Ok(Parsed::Ready {
-            request: Request::Status,
-            html: false,
-        }),
-        (Some("GET"), Some("/portal.js")) if body_len == 0 => Ok(Parsed::Ready {
-            request: Request::Script,
-            html: false,
-        }),
-        (Some("POST"), Some(path @ ("/consent" | "/logout"))) => {
-            if origin != Some(endpoint.origin.as_str())
-                || content_type != Some("application/x-www-form-urlencoded")
-            {
-                return Err(403);
-            }
-            let body = &bytes[length..];
-            let Some(hex) = body.strip_prefix(b"token=") else {
-                return Err(400);
-            };
-            let token = decode(hex).ok_or(400u16)?;
-            let action = if path == "/consent" {
-                Action::Consent
-            } else {
-                Action::Logout
-            };
-            Ok(Parsed::Ready {
-                request: Request::Act { action, token },
-                html: accept_html,
-            })
-        }
-        (Some("GET" | "POST"), _) => Err(404),
-        _ => Err(405),
-    }
+    super::routes::parse(
+        parsed.method,
+        parsed.path,
+        &bytes[length..],
+        headers,
+        entropy,
+        endpoint,
+    )
 }
 
 pub(super) fn decode(value: &[u8]) -> Option<[u8; 32]> {

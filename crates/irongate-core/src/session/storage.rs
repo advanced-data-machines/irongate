@@ -1,6 +1,6 @@
 //! Each occupied session reserves its own policy-effect cell.
 
-use super::{Attempt, Effect, EffectKind, EndReason, Phase};
+use super::{Attempt, Effect, EffectKind, EndReason, Phase, Provider};
 use crate::lease;
 
 /// One caller-owned session slot; fields can only be mutated by its table.
@@ -11,6 +11,7 @@ pub struct Slot {
     pub(super) lease: Option<lease::Handle>,
     pub(super) address: [u8; 4],
     pub(super) phase: Phase,
+    pub(super) provider: Option<Provider>,
     pub(super) lease_until: u64,
     pub(super) authorized_until: Option<u64>,
     pub(super) attempt: Option<Attempt>,
@@ -28,6 +29,7 @@ impl Slot {
         lease: None,
         address: [0; 4],
         phase: Phase::Leased,
+        provider: None,
         lease_until: 0,
         authorized_until: None,
         attempt: None,

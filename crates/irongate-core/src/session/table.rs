@@ -113,6 +113,7 @@ impl<'a> Table<'a> {
             lease: slot.lease?,
             address: slot.address,
             phase: slot.phase,
+            provider: slot.provider,
             lease_until: slot.lease_until,
             authorized_until: slot.authorized_until,
             attempt: slot.attempt,

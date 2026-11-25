@@ -48,6 +48,7 @@ impl Endpoint {
 pub(crate) struct Settings {
     pub endpoint: Endpoint,
     pub tls: Option<Arc<rustls::ServerConfig>>,
+    pub radius: Option<Arc<crate::lab::radius::config::Config>>,
 }
 impl Settings {
     pub fn load(path: &Path) -> io::Result<Self> {
@@ -58,8 +59,17 @@ impl Settings {
         let parsed = toml::de::DeTable::parse(text).map_err(|_| invalid("invalid portal TOML"))?;
         let table = parsed.get_ref();
         if table.keys().any(|k| {
-            !["mode", "origin", "certificate_der", "private_key_der"]
-                .contains(&k.get_ref().as_ref())
+            ![
+                "mode",
+                "origin",
+                "certificate_der",
+                "private_key_der",
+                "provider",
+                "radius_endpoint",
+                "radius_secret_file",
+                "nas_identifier",
+            ]
+            .contains(&k.get_ref().as_ref())
         }) {
             return Err(invalid("unknown portal setting"));
         }
@@ -83,7 +93,33 @@ impl Settings {
             }
             _ => return Err(invalid("portal mode/origin/credentials mismatch")),
         };
-        Ok(Self { endpoint, tls })
+        let provider = if table.contains_key("provider") {
+            string("provider")?
+        } else {
+            "consent"
+        };
+        let radius = match provider {
+            "consent"
+                if !["radius_endpoint", "radius_secret_file", "nas_identifier"]
+                    .iter()
+                    .any(|k| table.contains_key(*k)) =>
+            {
+                None
+            }
+            "radius" if endpoint.secure => {
+                Some(Arc::new(crate::lab::radius::config::Config::load(table)?))
+            }
+            _ => {
+                return Err(invalid(
+                    "unsupported provider/settings; RADIUS login requires HTTPS",
+                ));
+            }
+        };
+        Ok(Self {
+            endpoint,
+            tls,
+            radius,
+        })
     }
 }
 pub(super) fn invalid(message: &'static str) -> io::Error {

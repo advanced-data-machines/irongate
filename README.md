@@ -10,7 +10,9 @@ Portal configuration explicitly distinguishes [local on-device and external/clou
 
 For the next development session, start with the [session handoff](docs/handoff.md), which records the release checkpoint, evidence locations and HTTPS next steps.
 
-The [HTTPS consent checkpoint](docs/portal-https.md) adds a guest-only test CA and verified browser TLS through `just vm-https-test`. RADIUS and production certificate automation remain pending.
+The [HTTPS consent checkpoint](docs/portal-https.md) adds a guest-only test CA and verified browser TLS through `just vm-https-test`. Production certificate automation remains pending.
+
+The [RADIUS login slice](docs/radius-login.md) adds a real guest-only backend via `just vm-radius-test`. Authentication is the first of the three [lab-alpha increments](docs/lab-alpha.md); RADIUS accounting and operational demo integration remain pending.
 
 ## Try the CLI
 
@@ -62,7 +64,7 @@ cargo test --workspace --offline
 cargo doc --workspace --no-deps --offline
 ```
 
-Tests cover the example profiles, conflicting VLANs/subnets, provider references, resource limits, malformed input, redaction and actual CLI output/exit codes. The guest-only lab now exercises live forwarding and the admission owner; normal deployment and RADIUS integration remain unimplemented. A successful configuration check establishes internal consistency for the supported profile, not gateway correctness or measured capacity.
+Tests cover the example profiles, conflicting VLANs/subnets, provider references, resource limits, malformed input, redaction and actual CLI output/exit codes. The guest-only lab now exercises live forwarding and the admission owner; normal deployment and RADIUS accounting remain unimplemented. A successful configuration check establishes internal consistency for the supported profile, not gateway correctness or measured capacity.
 
 Doctor tests use private filesystem fixtures for link evidence, shared trunks, scope selection and incomplete observations. Keep `lib.rs` and `main.rs` as short entry points; put related behavior in focused, readable modules.
 

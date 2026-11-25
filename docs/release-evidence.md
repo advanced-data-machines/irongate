@@ -47,6 +47,12 @@ The [HTTPS consent feature](portal-https.md) adds explicit TLS configuration, bo
 
 The version-4 `local-https-v1` suite requires all 17 prior portal/packet cases plus independent browser/Python certificate rejection and TLS deadline/queue/malformed-record pressure evidence. Initial development run `bdc380b045883d2fd67d5f7d4435e4e7` established verified browser TLS and two occupied-worker deadlines, before the final queue-overflow checks were added; it is dirty development evidence. Retain final clean-commit runs separately with the full contract, three verified screenshots, quality identity, dependency graph, static ABI checks and exact footprint/memory observations. Production certificate automation, RADIUS and scale qualification remain pending.
 
+## RADIUS authentication checkpoint
+
+The [login slice](radius-login.md) combines the minimal provider boundary with one real FreeRADIUS/PAP path, supported policy and authentication observations. The current ordinary checkpoint passes 149 Rust tests and 36 Python regressions; CRAP analyzes 309 functions with only the preexisting CLI parser above 30 at 39.32. Inline bounded snapshot/credential variants have two explicit, justified Clippy size exemptions to avoid extra owner-side heap indirection; this does not exclude their functions from coverage/complexity analysis.
+
+Schema-5 `radius-login-v1` requires 20 cases, including the original packet/HTTPS guards, genuine backend Accept/Reject/recovery, enforced policy expiry and explicitly separated synthetic wire failures. Host validation requires scoped source-tagged local rows and explicitly unimplemented RADIUS accounting; local audit must not be reported as backend accounting acknowledgement. Development run `4901ffe3c3599826b331020899990c5c` and the separate standalone HTTPS regression are dirty evidence. Retain final clean runtime commits/runs independently with full quality and static ABI/footprint identity. Backend configs/disks contain test secrets and must not be published in the release evidence bundle.
+
 ## Release bundle contract
 
 Before publishing a release candidate, retain the following together:

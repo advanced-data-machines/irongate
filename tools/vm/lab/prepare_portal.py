@@ -5,17 +5,17 @@ import argparse
 from .host import LAB,boot,digest,new_run,now,overlay,result,seed,tools
 
 
-def main(https=False):
+def main(https=False,radius=False):
     tools()
-    manifest=LAB/("https-prepared.json"if https else"portal-prepared.json")
+    manifest=LAB/("radius-prepared.json"if radius else"https-prepared.json"if https else"portal-prepared.json")
     if manifest.exists():
         data=json.loads(manifest.read_text())
         if digest(data["image"])!=data["sha256"]:raise RuntimeError("Portal image digest mismatch")
         print("Verified existing guest browser image")
         return
-    parent=json.loads((LAB/("portal-prepared.json"if https else"prepared.json")).read_text())
+    parent=json.loads((LAB/("https-prepared.json"if radius else"portal-prepared.json"if https else"prepared.json")).read_text())
     if digest(parent["image"])!=parent["sha256"]:raise RuntimeError("Parent image digest mismatch")
-    directory,run_id=new_run(LAB,"https-prepare-"if https else"portal-prepare-")
+    directory,run_id=new_run(LAB,"radius-prepare-"if radius else"https-prepare-"if https else"portal-prepare-")
     overlay(parent["image"],directory/"disk.qcow2")
     script='''#!/bin/bash
 set -euo pipefail
@@ -31,6 +31,8 @@ PY
 '''
     if https:
         script=script.replace("install chromium","install chromium openssl libnss3-tools").replace("'chromium'],text=True)","'chromium','openssl','libnss3-tools'],text=True)")
+    if radius:
+        script=script.replace("install chromium","install chromium freeradius freeradius-utils").replace("'chromium'],text=True)","'chromium','freeradius','freeradius-utils'],text=True)")
     (directory/"payload/provision.sh").write_text(script)
     seed(directory,run_id,"prepare")
     print(f"Preparing Chromium inside the separate QEMU guest; log: {directory/'serial.log'}",flush=True)
@@ -46,4 +48,6 @@ PY
 if __name__=="__main__":
     parser=argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--https",action="store_true")
-    main(parser.parse_args().https)
+    parser.add_argument("--radius",action="store_true")
+    args=parser.parse_args()
+    main(https=args.https,radius=args.radius)

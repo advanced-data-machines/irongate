@@ -119,3 +119,12 @@ vm-https-prepare:
 vm-https-test:
     cargo build -p irongated --release --target x86_64-unknown-linux-musl --offline
     python3 -m tools.vm.lab.run --https
+
+# Prepare a separate guest-only FreeRADIUS backend image.
+vm-radius-prepare:
+    python3 -m tools.vm.lab.prepare_portal --radius
+
+# Verify one HTTPS/PAP backend with real login, policy and failure evidence.
+vm-radius-test:
+    cargo build -p irongated --release --target x86_64-unknown-linux-musl --offline
+    python3 -m tools.vm.lab.run --radius

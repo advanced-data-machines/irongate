@@ -13,7 +13,9 @@ mod storage;
 mod table;
 
 pub use identity::{Attempt, EffectToken, Handle};
-pub use model::{Config, Effect, EffectKind, EndReason, Error, MAX_SESSIONS, Phase, View};
+pub use model::{
+    Config, Effect, EffectKind, EndReason, Error, MAX_SESSIONS, Phase, Provider, View,
+};
 pub use storage::Slot;
 pub use table::Table;
 

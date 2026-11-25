@@ -16,6 +16,7 @@ pub(crate) enum Kind {
 #[derive(Clone, Copy, Debug)]
 pub(crate) struct Record {
     pub id: usize,
+    pub provider: Option<session::Provider>,
     pub at: u64,
     pub kind: Kind,
     pub session: session::Handle,
@@ -30,7 +31,7 @@ pub(crate) struct Journal {
     pub failed: u64,
     pub in_flight: Option<usize>,
     pub retry_at: u64,
-    pub reserved: Option<(session::Handle, lease::Handle)>,
+    pub reserved: Option<(session::Handle, lease::Handle, session::Provider)>,
     pub unavailable: bool,
     pub stalled: bool,
     pub in_flight_since: u64,
@@ -64,18 +65,19 @@ impl Journal {
         lease: lease::Handle,
         at: u64,
         bytes: u64,
+        provider: session::Provider,
     ) -> bool {
         if !self.can_admit() {
             return false;
         }
-        self.reserved = Some((session, lease));
-        self.push(session, lease, at, bytes, Kind::Granted);
+        self.reserved = Some((session, lease, provider));
+        self.push(session, lease, at, bytes, Kind::Granted, Some(provider));
         true
     }
 
     pub fn stop(&mut self, at: u64, bytes: u64, kind: Kind) {
-        if let Some((session, lease)) = self.reserved.take() {
-            self.push(session, lease, at, bytes, kind);
+        if let Some((session, lease, provider)) = self.reserved.take() {
+            self.push(session, lease, at, bytes, kind, Some(provider));
         }
     }
 
@@ -86,10 +88,12 @@ impl Journal {
         at: u64,
         bytes: u64,
         kind: Kind,
+        provider: Option<session::Provider>,
     ) {
         assert!(self.used < CAPACITY, "admission reserves its stop cell");
         self.entries[self.used] = Some(Record {
             id: self.used + 1,
+            provider,
             at,
             kind,
             session,
@@ -143,7 +147,7 @@ impl Journal {
     // Explicit root-only lab fault injection, never a client API.
     pub fn pressure(&mut self, session: session::Handle, lease: lease::Handle, at: u64) {
         while self.used + usize::from(self.reserved.is_some()) < CAPACITY {
-            self.push(session, lease, at, 0, Kind::TestPressure);
+            self.push(session, lease, at, 0, Kind::TestPressure, None);
         }
     }
 }

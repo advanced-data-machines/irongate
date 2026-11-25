@@ -6,7 +6,7 @@ from guest_common import CLIENT, GATEWAY, UPSTREAM, command
 NAMES = [CLIENT, GATEWAY, UPSTREAM]
 
 
-def prepare(created,portal_port=8080,https=False):
+def prepare(created,portal_port=8080,https=False,radius=False):
     existing = {entry["name"] for entry in json.loads(command("ip", "-j", "netns").stdout.strip() or "[]")}
     if existing.intersection(NAMES):
         raise RuntimeError("Owned namespace names already exist; refusing to reuse/delete them")
@@ -45,6 +45,8 @@ def prepare(created,portal_port=8080,https=False):
     }'''
     ports="{ 8443, 8444, 8445, 8446 }"if https else str(portal_port)
     rules=rules.replace("8080",ports)
+    if radius:
+        rules=rules.replace('iifname "down0"','iifname "up0" ip saddr 192.0.2.80 ip daddr 192.0.2.1 udp sport 1812 accept; iifname "down0"').replace('oifname "down0"','oifname "up0" ip saddr 192.0.2.1 ip daddr 192.0.2.80 udp dport 1812 accept; oifname "down0"')
     command("nft", "-f", "-", namespace=GATEWAY, input=rules)
     return {
         "guard": json.loads(command("nft", "-j", "list", "ruleset", namespace=GATEWAY).stdout),

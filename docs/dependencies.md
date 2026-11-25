@@ -38,3 +38,7 @@ The Linux-only lab additionally uses `httparse 1.10.1` for strict, bounded HTTP/
 ## HTTPS consent review
 
 The [HTTPS checkpoint](portal-https.md) pins rustls 0.23.46 with defaults disabled and one ring provider. It records the active Linux runtime/build graph, provider comparison, licenses, memory boundaries and static-musl binary checks. `http` and parse-only `toml` are reused in the lab daemon; no new framework, async runtime or Serde derive features are enabled.
+
+## RADIUS login slice
+
+The [login review](radius-login.md) records the pinned RustCrypto MD5/HMAC pair, form parser, reused zeroize/subtle packages and bounded borrowed wire codec. These are Linux service-worker dependencies; core/protocol libraries remain dependency-free. PAP/UDP is an isolated interoperability profile, not a production transport decision. Broader RADIUS client/server libraries were considered without importing a runtime, dictionary framework or server stack for this one-client task.

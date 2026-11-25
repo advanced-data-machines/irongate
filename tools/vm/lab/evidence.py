@@ -15,11 +15,16 @@ PORTAL_CASES=frozenset({"browser_consent_and_logout","portal_one_use_origin_and_
 
 TLS_CASES=frozenset({"tls_certificate_validation_and_no_http_fallback","tls_handshake_deadline_pressure_and_memory"})
 
-def validate(guest, run_id,portal=False,https=False):
+RADIUS_CASES=frozenset({"browser_radius_accept_and_logout","radius_reject_and_session_timeout","radius_unsupported_policy_denied","radius_no_consent_fallback_or_replay","radius_protocol_faults_deny_and_report","radius_late_result_cannot_authorize_reused_lease","radius_backend_recovery"})
+
+def validate(guest, run_id,portal=False,https=False,radius=False):
+    if radius:https=True
     if https:portal=True
     schema,suite=(3,"local-consent-v1")if portal else(2,"untagged-acceptance-v1")
     if https:schema,suite=4,"local-https-v1"
+    if radius:schema,suite=5,"radius-login-v1"
     expected=(CASES|PORTAL_CASES|TLS_CASES)if https else CASES|PORTAL_CASES if portal else CASES
+    if radius:expected=CASES|TLS_CASES|RADIUS_CASES
     if (guest.get("schema") != schema or guest.get("suite") != suite or guest.get("scope") != "isolated_packet_lab"
             or guest.get("run_id") != run_id or guest.get("status") != "passed"):
         raise ValueError("Guest result identity/status does not match this run")
@@ -52,7 +57,8 @@ def validate(guest, run_id,portal=False,https=False):
     if (ipv6.get("kernel_forwarding") != 1 or ipv6.get("forward_drop_delta", 0) < 1
             or ipv6.get("ingress_received", 0) < 1 or ipv6.get("upstream_received") != 0):
         raise ValueError("IPv6 kernel bypass guard was not independently exercised")
-    if portal:validate_portal(guest,run_id,namespaces)
+    if radius:validate_radius(guest,run_id,namespaces)
+    elif portal:validate_portal(guest,run_id,namespaces)
     if https:validate_tls(guest)
 
 
@@ -91,3 +97,19 @@ def validate_tls(guest):
     for key in ("memory_before","memory_after"):
         if pressure.get(key,{}).get("VmRSS",0)<=0 or pressure.get(key,{}).get("VmHWM",0)<=0:
             raise ValueError("TLS memory observations missing")
+
+
+def validate_radius(guest,run_id,namespaces):
+    browser=guest.get("browser",{})
+    if browser.get("namespace")!=namespaces["iglab-client"] or browser.get("transport")!="devtools_pipe":raise ValueError("RADIUS browser namespace missing")
+    expected={"bad_auth":502,"bad_ma":502,"missing_ma":502,"wrong_id":502,"length":502,"wrong_source":503,"timeout":503,"challenge":422}
+    if guest.get("radius_faults",{}).get("http")!=expected:raise ValueError("Incomplete protocol rejection evidence")
+    late=guest.get("radius_late",{})
+    if late.get("http")!=409 or late.get("old_generation")==late.get("new_generation"):raise ValueError("Stale session evidence missing")
+    auth=guest.get("radius_auth",{})
+    if auth.get("health")!="responsive" or auth.get("access_accepts")!=3 or auth.get("access_rejects",0)<1 or auth.get("accounting")!="not_implemented":raise ValueError("Authentication/recovery observations missing")
+    records=guest.get("local_records",{});rows=records.get("rows",[])
+    if records.get("durable")!=6 or records.get("retained")!=6 or records.get("scope")!="local_audit_not_radius_accounting":raise ValueError("Local authentication audit scope/persistence missing")
+    if [row.get("id")for row in rows]!=list(range(1,7)) or any(row.get("provider")!="radius" or row.get("network")!=1 or row.get("run_id")!=run_id for row in rows):raise ValueError("Authentication audit identity mismatch")
+    if [row.get("kind")for row in rows]!=["Granted","Revoked","Granted","Expired","Granted","Revoked"]:raise ValueError("Authentication audit lifecycle mismatch")
+    if not guest.get("radius_packages"):raise ValueError("Backend version evidence missing")

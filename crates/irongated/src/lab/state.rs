@@ -28,6 +28,8 @@ pub struct State<'a> {
     pub counters: Counters,
     pub tokens: super::portal::Tokens,
     pub journal: super::portal::Journal,
+    pub provider: session::Provider,
+    pub authentication: super::radius::health::Health,
 }
 
 impl<'a> State<'a> {
@@ -44,6 +46,8 @@ impl<'a> State<'a> {
             counters: Counters::default(),
             tokens: Default::default(),
             journal: Default::default(),
+            provider: session::Provider::Consent,
+            authentication: Default::default(),
         }
     }
 

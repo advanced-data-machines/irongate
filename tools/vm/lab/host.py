@@ -49,7 +49,7 @@ def seed(directory, run_id, mode):
             "ssh_pwauth": False, "disable_root": True, "package_update": False, "package_upgrade": False,
             "write_files": [
                 {"path": "/run/irongate-packet-lab/id", "content": run_id + "\n", "permissions": "0600"},
-                {"path":"/run/irongate-packet-lab/mode","content":mode+"\n"if mode in ("portal","https")else"packet\n","permissions":"0600"},
+                {"path":"/run/irongate-packet-lab/mode","content":mode+"\n"if mode in ("portal","https","radius")else"packet\n","permissions":"0600"},
                 {"path": "/run/irongate-packet-lab/start.sh", "content": script, "permissions": "0700"}],
             "runcmd": [["bash", "/run/irongate-packet-lab/start.sh"]]}
     for artifact in sorted((directory / "payload").iterdir()):

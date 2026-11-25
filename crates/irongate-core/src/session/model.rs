@@ -13,7 +13,7 @@ pub struct Config {
     pub network: NetworkId,
     /// Nonzero owner epoch, unique across construction/reload.
     pub epoch: u64,
-    /// Maximum time to complete a consent decision.
+    /// Maximum time to complete a consent or external authentication attempt.
     pub consent_seconds: u32,
     /// Maximum requested access lifetime; also capped by the current lease.
     pub max_authorized_seconds: u32,
@@ -42,7 +42,7 @@ pub enum Error {
     InvalidLease,
     /// Session epoch/network/generation no longer resolves.
     StaleHandle,
-    /// Consent attempt expired, was replaced or belongs to another session.
+    /// Admission attempt expired, was replaced or belongs to another session.
     StaleAttempt,
     /// Policy completion does not match the currently dispatched operation.
     StaleEffect,
@@ -54,6 +54,15 @@ pub enum Error {
     SequenceExhausted,
 }
 
+/// Source of a validated admission decision; credentials never enter the core.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum Provider {
+    /// Local acceptance of network terms.
+    Consent,
+    /// A validated result from the configured RADIUS worker.
+    Radius,
+}
+
 /// Last observed session state; `allows` separately checks current lease/time.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum Phase {
@@ -61,6 +70,8 @@ pub enum Phase {
     Leased,
     /// A consent attempt is outstanding, upstream denied.
     AwaitingConsent,
+    /// An external authentication attempt is outstanding, upstream denied.
+    AwaitingAuthentication,
     /// Positive decision awaits policy application acknowledgement, upstream denied.
     Applying,
     /// Policy application confirmed and access lifetime remains valid.
@@ -88,15 +99,26 @@ pub enum EndReason {
     ConsentExpired,
     /// Policy application failed; removal must clean up possible partial work.
     ApplyFailed,
+    /// Backend explicitly rejected the current authentication attempt.
+    AuthenticationRejected,
+    /// Authentication failed or the supported policy could not be applied.
+    AuthenticationFailed,
+    /// The current authentication attempt exceeded its deadline.
+    AuthenticationExpired,
 }
 
 impl EndReason {
     pub(super) fn terminal(self) -> Phase {
         match self {
-            Self::LeaseExpired | Self::AuthorizationExpired | Self::ConsentExpired => {
-                Phase::Expired
-            }
-            Self::Logout | Self::LeaseLost | Self::ApplyFailed => Phase::Revoked,
+            Self::LeaseExpired
+            | Self::AuthorizationExpired
+            | Self::ConsentExpired
+            | Self::AuthenticationExpired => Phase::Expired,
+            Self::Logout
+            | Self::LeaseLost
+            | Self::ApplyFailed
+            | Self::AuthenticationRejected
+            | Self::AuthenticationFailed => Phase::Revoked,
         }
     }
 }
@@ -140,6 +162,8 @@ pub struct View {
     pub address: [u8; 4],
     /// Current owner phase.
     pub phase: Phase,
+    /// Source of the current/last applied positive decision, if any.
+    pub provider: Option<Provider>,
     /// Last observed lease deadline.
     pub lease_until: u64,
     /// Access deadline after a positive decision, if present.

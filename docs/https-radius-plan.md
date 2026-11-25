@@ -4,7 +4,7 @@ Gate A is integrated into `release/0.1.x` through `5695c36`: one-client standalo
 
 Gate B will demonstrate HTTPS login against an external RADIUS service, enforced policy and independently acknowledged accounting. Keep standalone consent runnable throughout. Integrate each completed checkpoint into `release/0.1.x` before branching the next; avoid stacking unfinished features. These are proposed branches and limits, not implemented capabilities or delivery estimates.
 
-The first HTTPS consent checkpoint is implemented on `feature/portal-https`; see its [implementation, dependency review and limits](portal-https.md). Review/integrate that feature before starting the provider/configuration boundary. No RADIUS implementation is included in it.
+The HTTPS consent checkpoint is integrated into `release/0.1.x` at `d119adf`; see its [implementation, dependency review and limits](portal-https.md). The narrow provider/configuration boundary and authentication are combined into `feature/radius-login` as one real vertical slice. See [RADIUS implementation](radius-login.md) and the agreed [lab-alpha stop point](lab-alpha.md). No general provider plugin framework is required.
 
 ## Checkpoints in dependency order
 

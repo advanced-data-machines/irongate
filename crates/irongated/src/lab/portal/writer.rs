@@ -44,7 +44,7 @@ pub(super) fn run(
     let mut committed = 0;
     while let Ok(record) = records.recv() {
         let mut line=serde_json::to_vec(&serde_json::json!({"schema":1,"run_id":run_id,"id":record.id,
-            "kind":format!("{:?}",record.kind),"at_monotonic_seconds":record.at,
+            "provider":record.provider.map(|p|match p{irongate_core::session::Provider::Consent=>"consent",irongate_core::session::Provider::Radius=>"radius"}),"kind":format!("{:?}",record.kind),"at_monotonic_seconds":record.at,
             "network":record.session.network().0,"session_generation":record.session.generation(),
             "lease_generation":record.lease.generation(),"submitted_ip_bytes_total":record.input_output_ip_bytes})).expect("fixed JSON record");
         line.push(b'\n');

@@ -9,7 +9,7 @@ use std::{
     sync::Arc,
 };
 
-pub(super) fn read_bounded(path: &Path, limit: u64, private: bool) -> io::Result<Vec<u8>> {
+pub(crate) fn read_bounded(path: &Path, limit: u64, private: bool) -> io::Result<Vec<u8>> {
     if !path.is_absolute() {
         return Err(invalid("credential/config path must be absolute"));
     }

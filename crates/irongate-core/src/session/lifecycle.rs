@@ -24,7 +24,11 @@ impl Table<'_> {
                         .attempt
                         .is_some_and(|attempt| attempt.expires_at <= self.now)
                     {
-                        slot.terminate(EndReason::ConsentExpired);
+                        slot.terminate(if slot.phase == Phase::AwaitingAuthentication {
+                            EndReason::AuthenticationExpired
+                        } else {
+                            EndReason::ConsentExpired
+                        });
                     } else if matches!(slot.phase, Phase::Applying | Phase::Authorized)
                         && slot.authorized_until.is_some_and(|until| until <= self.now)
                     {

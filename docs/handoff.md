@@ -1,22 +1,32 @@
-# Session handoff: HTTPS consent checkpoint
+# Session handoff: RADIUS login slice
 
-The HTTPS consent checkpoint now lives on `feature/portal-https`, branched from release commit `438a1d2`. This handoff supersedes the earlier instructions to create that branch. Check actual Git status/history before resuming; the feature is separate from `release/0.1.x` until explicitly integrated.
+Current feature: `feature/radius-login`, branched from release at `d119adf` after HTTPS was integrated. Check actual Git status/history before resuming. The feature's own commit follows this documentation update; release remains separate until explicitly integrated. No push, tag, deployment or feature-branch deletion was performed.
 
 ## Current checkpoint and next action
 
-- HTTPS consent is implemented with rustls 0.23.46, defaults disabled and one ring provider; both daemon and CLI have verified static-musl builds.
-- Explicit lab TOML selects HTTPS/8443 or the legacy HTTP/8080 fixture, with no downgrade fallback. TLS 1.3 only; bounded workers/queues, phase deadlines and service counters remain outside the packet owner.
-- Each HTTPS VM generates fresh test PKI and trusts one CA through Chromium's managed `CACertificates` policy inside that guest. No host trust/network changes. Expired, wrong-name and untrusted certificates must fail in both browser and Python.
-- Current ordinary checks: 139 Rust tests, 19 host lab/TLS tests, 16 comparison regressions; CRAP 279 functions, only the old CLI parser above 30 at 39.32. Anonymous Unix-socket TLS tests may require sandbox escalation to set timeouts; they bind no host listener.
-- HTTPS reports use schema 4 / `local-https-v1`, with 19 required cases, queue-overflow/deadline/malformed-record evidence and three browser screenshots. The HTTP fixture remains schema 3 with 17 cases.
-- Review/integrate this feature, then branch `feature/provider-boundary` from release. Do not add RADIUS directly to the TLS branch. Continue with the [HTTPS/RADIUS plan](https-radius-plan.md) and [HTTPS implementation](portal-https.md).
-- Production certificate issuance/renewal, reload/expiry diagnostics, normal deployment, RADIUS, journal recovery and scale qualification remain pending.
+- The authentication increment of the agreed [lab alpha](lab-alpha.md) is implemented: one HTTPS/PAP backend, explicit native lab TOML, provider-specific typed attempts, cryptographically validated replies, Session-Timeout and visible authentication outcomes.
+- Current ordinary checks: 149 Rust tests, 20 host lab/evidence tests and 16 comparison regressions. CRAP analyzes 309 functions; only the old CLI parser exceeds 30 (39.32). Native bootstrap/serving coverage is still incomplete.
+- First dirty RADIUS development run: `4901ffe3c3599826b331020899990c5c`, 20 cases against FreeRADIUS `3.2.7+dfsg-1+deb13u2`. Wrong-ID/length fault probes were subsequently strengthened so cryptographic checks cannot hide a missing structural/identifier check.
+- Standalone HTTPS regression passed separately in dirty run `81eae6a5e2d6863c851bd00539274ff7` (19 cases). Find final **passed schema-5 / radius-login-v1, dirty-false** reports matching the feature commit under `target/vm/packet-lab/runs/`; never substitute the development run for clean evidence.
+- Review/integrate this slice, then implement **RADIUS accounting**, then operational/demo integration. Do not start a provider plugin framework or add unrelated auth methods. The minimal provider boundary is already part of this real path.
+- RADIUS accounting is explicitly `not_implemented`. Six synced provider-tagged local audit rows do not constitute Start/Interim/Stop or durable billing. Normal deployment, journal recovery/rotation, production certificates/protected backend transport, two VLANs/cloud and load qualification remain pending.
+- The user plans a dedicated gateway appliance later. Keep current work inside QEMU; start appliance qualification on an isolated test LAN as described in the alpha plan.
+
+Read [RADIUS implementation and limits](radius-login.md), [alpha finish line](lab-alpha.md) and [burndown](burndown.md) before new work. The [older HTTPS/RADIUS design](https-radius-plan.md) supplies background; authentication/provider checkpoints were deliberately combined into one slice.
 
 ## Repository and evidence state
 
-Workspace: `/home/sbeskur/repos/public/irongate`. All previously completed feature branches were integrated into `release/0.1.x` through `5695c36`, then plans/handoff were committed at `4812532` / `438a1d2`. No push, tag, deployment or feature-branch deletion was performed. Check remotes before any external action.
+Workspace: `/home/sbeskur/repos/public/irongate`. Earlier completed branches were integrated into release through `5695c36`; plans/handoff at `4812532` / `438a1d2`; HTTPS integrated at `d119adf`. Do not push or send external messages without authorization.
 
-The earlier HTTP Gate A clean run is `b9b9896b713cbfb0cc8093a5ea59961a` at `5695c36`. Initial dirty HTTPS run `bdc380b045883d2fd67d5f7d4435e4e7` passed browser/certificate/deadline cases before queue saturation was added; it is not the final accepted full-contract baseline. Locate the latest **passed schema-4, dirty-false report matching the feature runtime commit** under `target/vm/packet-lab/runs/`; never treat a newer failed/interrupted/dirty run as clean evidence. Per-run quality bundles should carry matching source identity, logs, LCOV/CRAP, dependency graph, ABI and footprint observations. Generated artifacts are ignored and not a release archive.
+Canonical earlier clean HTTPS run: `33a7664f01b53dabe55b6900a855d8bd`, source `d119adf`, 19 cases. Earlier HTTP Gate A: `b9b9896b713cbfb0cc8093a5ea59961a`, source `5695c36`, 17 cases. Reports, screenshots and quality bundles are ignored local artifacts, not a release archive. Guest disk overlays contain test keys/secrets; never publish those disks/private configs as public release evidence. Final bundles should retain matching commit/binary identity, logs, LCOV/CRAP, dependency graph and ABI/footprint observations.
+
+## RADIUS-specific lessons
+
+Core adds `begin_radius`, `radius_accept` and `radius_deny`, a separate pending-auth phase, source provenance and typed cancellation/expiry reasons. Credentials stay in bounded zeroized worker storage; only opaque attempts and typed decisions cross to the owner. Root fixture consent is still used by shared packet-pressure tests; public consent fallback is forbidden in RADIUS mode.
+
+The guest FreeRADIUS policy needs multiline module/authenticate blocks. Capture startup diagnostics with `-l stdout`, without debug `-X`, and redact the generated secret and test password before retaining logs. The backend uses one private config and registered NAS `192.0.2.1`; a separate explicitly labeled Python server replaces it only during wire-fault injection, then the real backend restarts for recovery evidence. No backend runs on the workstation.
+
+The core/protocol libraries remain dependency-free and allocator-independent. The Linux daemon adds pinned RustCrypto MD5/HMAC and form_urlencoded; reuse existing zeroize/subtle. This is an isolated legacy UDP profile, not a production transport endorsement. Review protected backend transport before appliance deployment. Secrets are fresh per guest; `lab-user` / `lab-pass` are public test-only credentials.
 
 ## What works and what does not yet
 

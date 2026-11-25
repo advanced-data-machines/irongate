@@ -5,6 +5,7 @@ use irongate_core::{lease, session};
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub(crate) enum Action {
     Consent,
+    Login,
     Logout,
 }
 

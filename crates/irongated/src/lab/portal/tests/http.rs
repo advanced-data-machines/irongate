@@ -107,7 +107,11 @@ fn worker_only_sends_typed_requests_and_has_a_bounded_busy_response() {
                 .try_send(Reply::Redirect)
                 .unwrap_or_else(|_| panic!());
         },
-        &super::super::config::Endpoint::http(),
+        &super::super::config::Settings {
+            endpoint: super::super::config::Endpoint::http(),
+            tls: None,
+            radius: None,
+        },
         &super::super::metrics::Metrics::default(),
     )
     .unwrap();
@@ -125,7 +129,11 @@ fn worker_only_sends_typed_requests_and_has_a_bounded_busy_response() {
         profile::CLIENT_IP.into(),
         &full,
         || panic!("full queue must not wake owner"),
-        &super::super::config::Endpoint::http(),
+        &super::super::config::Settings {
+            endpoint: super::super::config::Endpoint::http(),
+            tls: None,
+            radius: None,
+        },
         &super::super::metrics::Metrics::default(),
     )
     .unwrap();

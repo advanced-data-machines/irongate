@@ -2,6 +2,7 @@
 import http.client
 import json
 import socket
+import urllib.parse
 import sys
 from guest_common import namespace_guard
 import portal_config
@@ -17,6 +18,7 @@ for line in sys.stdin:
             slow.sendall(b"GET / HTTP/1.1\r\nHost: ")
             result={"status":200}
         else:
+            if "login"in request:request.update(method="POST",path="/login",body=urllib.parse.urlencode(request["login"]))
             headers={"Accept":"application/json"}
             if request.get("method")=="POST":
                 headers.update({"Origin":request.get("origin",portal_config.origin()),"Content-Type":"application/x-www-form-urlencoded"})
