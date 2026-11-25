@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IronGate Deployment Quick Start — First Draft</title>
+  <link rel="stylesheet" href="irongate-quick-start.css">
+  <style>
+    .draft { color: #8a5713; font-weight: bold; }
+    .proposal { border-left-color: #b17b23; background: #fff7e9; }
+    .page p { font-size: 10.5px; }
+    .page .note { font-size: 9.2px; }
+    .page table { font-size: 10px; }
+    .page pre { font-size: 9.5px; }
+    .status-label { font-weight: bold; color: #8a5713; }
+  </style>
+</head>
+<body>
+<section class="page">
+  <header><div class="brand">IronGate</div><div class="document"><span class="draft">DEPLOYMENT QUICK START · DRAFT 01</span><br>Proposed operator experience · November 2026</div></header>
+  <h1>Install a gateway.<br>Configure. Verify. Operate.</h1>
+  <p class="intro">First draft for a dedicated Linux gateway with one subscriber network, a local HTTPS captive portal and an existing RADIUS service.</p>
+  <aside class="proposal"><strong>Design preview — not executable installation instructions.</strong> Release packages, the system service and host-network apply/rollback commands below do not exist yet. Today’s working gateway runs only in the isolated QEMU lab. This guide defines the installation experience we intend to build.</aside>
+
+  <h2><span>1</span> Prepare an isolated gateway</h2>
+  <p>Use a dedicated x86-64 Linux appliance with systemd, two Ethernet interfaces and local console access. Keep management reachable independently of subscriber forwarding. Select the supported OS/version and capacity from a qualified release profile; that matrix is still to be established.</p>
+  <div class="topology">
+    <div><strong>TEST CLIENT / AP</strong><br>Isolated subscriber LAN</div><b>↔</b><div><strong>IRONGATE</strong><br>Subscriber NIC + uplink NIC</div><b>↔</b><div><strong>UPSTREAM</strong><br>DNS / RADIUS / Internet</div>
+  </div>
+  <p class="note">Begin on an isolated test LAN. Do not replace the production default gateway. Identify existing DHCP servers, interface managers and firewall rules before applying a configuration. Do not connect two DHCP servers to the same subscriber LAN.</p>
+
+  <h2><span>2</span> Install the release package <em class="status-label">— proposed</em></h2>
+  <p>Obtain the exact version/architecture package and published verification material from the future IronGate release channel. Verify its provenance and checksum before installation. No deployment package or download URL is published by this draft.</p>
+  <pre># Future package name and installation example — not available today
+sudo apt install ./irongate_VERSION_amd64.deb</pre>
+  <p>The proposed package installs <code>ig</code>, <code>irongated</code>, a commented configuration and a systemd unit. Installation should leave forwarding inactive until the administrator reviews and applies the network plan. A static-musl binary does not remove Linux/kernel or service prerequisites.</p>
+
+  <h2><span>3</span> Complete the site configuration</h2>
+  <p><strong>Proposed location:</strong> <code>/etc/irongate/irongate.toml</code>. The package should provide a complete example. Record explicit values for:</p>
+  <table>
+    <thead><tr><th>Setting</th><th>Illustrative value / operator decision</th></tr></thead>
+    <tbody>
+      <tr><td>Interfaces and LAN</td><td>Uplink <code>enp1s0</code>, subscriber <code>enp2s0</code>; 192.168.50.1/24; DHCP .20–.250. Confirm actual names and subnet conflicts.</td></tr>
+      <tr><td>Upstream and DNS</td><td>Declare uplink addressing/default route and DNS. Select and verify the supported routed/NAT behavior; this deployment path is not implemented.</td></tr>
+      <tr><td>Local HTTPS portal</td><td>Choose a real hostname, trusted certificate/key and client DNS resolution. Define certificate renewal ownership. Arbitrary HTTPS requests are not intercepted.</td></tr>
+      <tr><td>RADIUS and accounting</td><td>Server endpoint/transport, NAS identity and source IP, secret-file path, authentication method and interim interval. Register this NAS on the backend.</td></tr>
+      <tr><td>Limits and ownership</td><td>Choose tested session/memory limits, session/idle timeouts, IPv6 containment and managed or administrator-preconfigured host resources.</td></tr>
+    </tbody>
+  </table>
+  <p class="note">Store passwords, shared secrets and private keys outside TOML, readable only by the required service identity. Production HTTPS settings, protected backend transport and full runtime schema still need implementation/qualification. External/cloud portal deployment is outside this first walkthrough.</p>
+  <footer><span>DRAFT 01 · Intended deployment workflow · Not an installation release</span><span>1 / 2</span></footer>
+</section>
+
+<section class="page">
+  <header><div class="brand">IronGate</div><div class="document"><span class="draft">DEPLOYMENT QUICK START · DRAFT 01</span><br>Apply deliberately · Verify from a client</div></header>
+  <h2 class="first"><span>4</span> Validate and review the network plan</h2>
+  <p><strong>Available today:</strong> the CLI supports offline example-profile validation and passive Linux interface preflight. A successful result does not establish runtime readiness.</p>
+  <pre>ig config check --config /etc/irongate/irongate.toml
+ig doctor --config /etc/irongate/irongate.toml</pre>
+  <p><span class="status-label">Proposed:</span> review every address, route, DHCP owner and persistent guard change before applying. The plan must identify its effect on management access and the rollback path.</p>
+  <pre># Proposed commands — not implemented
+ig plan --config /etc/irongate/irongate.toml
+sudo ig apply --plan setup.json
+sudo systemctl enable --now irongated</pre>
+  <p class="note">The future plan command should produce <code>setup.json</code>; apply must revalidate it against current host state. First activation requires a local console and a tested recovery path. The package must not silently take over unrelated interfaces or firewall resources.</p>
+
+  <h2><span>5</span> Prove access from a subscriber</h2>
+  <table class="checks">
+    <thead><tr><th>Procedure</th><th>Expected result</th></tr></thead>
+    <tbody>
+      <tr><td>Connect a test device</td><td>Obtain an address, gateway and DNS from the selected profile. Upstream transit remains blocked before login.</td></tr>
+      <tr><td>Open the portal</td><td>Use the documented portal URL; HTTPS validates without bypassing certificate warnings. Automatic discovery/HTTP redirection must be tested separately.</td></tr>
+      <tr><td>Sign in and transfer data</td><td>A valid account permits bidirectional transit. A rejected account stays blocked. Backend records show matching session identity and directional cumulative usage.</td></tr>
+      <tr><td>Log out and expire a session</td><td>Both existing and new transit stop. A Stop record is delivered or clearly retained as pending; backend delay cannot hold access open.</td></tr>
+      <tr><td>Exercise an outage</td><td>Existing users retain their granted limits/expiry. New authentication fails closed; known accounting failure pauses admissions. Restore the backend and verify backlog recovery.</td></tr>
+    </tbody>
+  </table>
+  <p class="note">A running process is not proof of enforcement. Use an independent subscriber, backend records and counter identities. Production qualification must also cover restart behavior, IPv6 bypass, NIC behavior and the intended load.</p>
+
+  <h2><span>6</span> Operate and recover <em class="status-label">— proposed</em></h2>
+  <pre># Proposed operational commands — not implemented
+ig status --json
+ig verify --config /etc/irongate/irongate.toml
+ig support export --output support.json</pre>
+  <p>Status should separate enforcement, portal, authentication and accounting health. Verification actively creates test traffic; support exports should redact secrets and subscriber identifiers by default. Runtime <code>ig doctor</code> integration remains to be built.</p>
+  <p><strong>Rollback:</strong> keep the previous package/configuration and management path available. Restore only IronGate-owned host changes using the future recorded rollback procedure. Stopping the service must leave subscriber transit blocked; it must not flush the host firewall or open unrestricted forwarding. Package downgrade alone is not a complete network rollback.</p>
+  <aside class="proposal"><strong>Before this becomes an install guide</strong> Deliver and test packaging/service startup, complete runtime TOML, safe apply/rollback, portal certificates/discovery, uplink routing/NAT, passive runtime diagnostics and documented accounting restart/storage behavior. Today’s accounting outbox is volatile: pending records may be lost on a crash. No production capacity is qualified.</aside>
+  <footer><span>Current runnable path: irongate-quick-start.pdf · Design: docs/operations.md</span><span>2 / 2</span></footer>
+</section>
+</body>
+</html>

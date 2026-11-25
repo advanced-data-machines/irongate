@@ -137,3 +137,7 @@ vm-accounting-test:
 # Render the two-page QEMU quick start guide as a PDF.
 qsg:
     python3 scripts/render-brochure.py docs/irongate-quick-start.html
+
+# Render the proposed operator deployment guide (draft, not install instructions).
+deployment-qsg:
+    python3 scripts/render-brochure.py docs/irongate-deployment-quick-start.html

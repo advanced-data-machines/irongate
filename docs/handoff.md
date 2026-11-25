@@ -4,6 +4,8 @@ Current branch: `release/0.1.x`. Accounting runtime `880a27d` and its evidence d
 
 A two-page lab Quick Start Guide is saved as `docs/irongate-quick-start.pdf`, with editable HTML/CSS alongside it. Rebuild with `just qsg` using installed headless Chrome/Chromium. It covers the full preparation chain, automated accounting run, expected results and troubleshooting.
 
+A separate operator first draft is `docs/irongate-deployment-quick-start.pdf` (editable HTML, shared QSG CSS; rebuild with `just deployment-qsg`). It describes proposed release installation, site configuration, apply, subscriber verification and rollback. Unimplemented commands/package/service are explicitly labeled; it is not executable deployment guidance or added alpha scope.
+
 ## Current checkpoint and next action
 
 - The second [lab-alpha increment](lab-alpha.md) is implemented: real RADIUS Start/Interim/Stop, boot-unique lifecycle IDs, per-session directional submitted IP octets, four fixed lifecycle slots with reserved Stop capacity, one dedicated bounded worker and observable outage/backlog/recovery.
