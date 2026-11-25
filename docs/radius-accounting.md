@@ -77,6 +77,15 @@ Pure/anonymous-socket tests cover ordering, capacity and Stop reservation, backo
 
 ## Remaining line
 
-This completes the accounting behavior for the selected lab profile once its clean-commit evidence passes. Finish operational/demo integration next, then stop alpha feature expansion. Durable outage/restart replay, shutdown draining, accounting failover, backend billing reconciliation, production transport/certificates, two VLANs/cloud and load/churn/soak qualification remain later work. A killed daemon can lose pending accounting work; the independent nftables guard still closes transit. Do not deploy this lab adapter as a production billing gateway.
+This completes the accounting behavior for the selected lab profile; clean runtime `880a27d` passed the accounting and login-regression contracts. Finish operational/demo integration next, then stop alpha feature expansion. Durable outage/restart replay, shutdown draining, accounting failover, backend billing reconciliation, production transport/certificates, two VLANs/cloud and load/churn/soak qualification remain later work. A killed daemon can lose pending accounting work; the independent nftables guard still closes transit. Do not deploy this lab adapter as a production billing gateway.
 
 References: [RFC 2866](https://www.rfc-editor.org/rfc/rfc2866.html), [RFC 2869](https://www.rfc-editor.org/rfc/rfc2869.html), [diagnostic design](accounting-diagnostics.md).
+
+
+## Clean feature checkpoint
+
+Runtime commit **`880a27d50810b34baf0f979a1e02dabcb000a4ed`** passed accounting run **`b6be6a364080963b722ead5252d60630`** (18 cases) and independent authentication-only regression **`56a0366f5358d5f20e178289e2775130`** (20 cases), both with dirty=false. The accounting run includes three verified browser PNGs. Its `quality/` directory contains check/coverage/CRAP/docs/Python logs, dependency metadata, static ABI/footprint observations and an identity manifest. Source, binary, lockfile and quality-file hashes were checked against the reports. A subsequent documentation-only commit records these results.
+
+All 161 Rust tests and 38 Python checks pass. CRAP analyzes 342 functions with only the existing CLI parser above 30 (39.32). The outbox is 3,104 bytes in this build. Stripped static-musl artifacts are 881,432 bytes for `ig` and 2,143,112 for `irongated`; neither has an ELF interpreter or shared-library dependencies. These are build/functional observations, not gateway capacity measurements. Accounting introduced no new Cargo dependencies.
+
+Reports and quality files live under ignored `target/vm/packet-lab/runs/`, not a durable public archive. Do not publish guest disks or private backend/certificate configuration. The feature is ready for integration review; no merge, new tag or push is implied by this checkpoint.
