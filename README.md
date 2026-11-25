@@ -14,6 +14,8 @@ The [HTTPS consent checkpoint](docs/portal-https.md) adds a guest-only test CA a
 
 The [RADIUS login slice](docs/radius-login.md) adds a real guest-only backend via `just vm-radius-test`. The [accounting slice](docs/radius-accounting.md) adds Start/Interim/Stop and outage evidence via `just vm-accounting-test`. These are the first two [lab-alpha increments](docs/lab-alpha.md); operational demo integration remains.
 
+Start with the two-page [Quick Start Guide (PDF)](docs/irongate-quick-start.pdf) for the safe QEMU demonstration. Rebuild it with `just qsg`.
+
 ## Try the CLI
 
 ```sh

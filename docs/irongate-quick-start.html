@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IronGate Quick Start Guide — QEMU Lab</title>
+  <link rel="stylesheet" href="irongate-quick-start.css">
+</head>
+<body>
+<section class="page">
+  <header><div class="brand">IronGate</div><div class="document">QUICK START GUIDE<br>Linux / QEMU lab · November 2026</div></header>
+  <h1>Verify captive access<br>without changing your LAN</h1>
+  <p class="intro">Run the automated HTTPS portal, RADIUS authentication and accounting demonstration on a Linux workstation. No gateway appliance or second physical NIC is required.</p>
+  <aside><strong>Scope</strong> This is the current one-client development lab, not a production gateway installation. Test networking, certificates and backend services stay inside a disposable VM. The automated run needs no console login.</aside>
+
+  <h2><span>1</span> Before you begin</h2>
+  <table>
+    <tbody>
+      <tr><th>Host</th><td>Linux x86-64 with usable KVM (<code>/dev/kvm</code>). Allow four virtual CPUs and 8 GiB guest RAM, plus host headroom.</td></tr>
+      <tr><th>Tools</th><td>Rust 1.100+, Cargo/rustup, just, Python 3.11+, <code>qemu-system-x86_64</code>, <code>qemu-img</code> and <code>cloud-localds</code>.</td></tr>
+      <tr><th>Storage / network</th><td>Space for cached images and fresh 32 GiB virtual overlays. Internet access for dependency/image downloads and first-time guest package preparation.</td></tr>
+    </tbody>
+  </table>
+  <p>Run commands from the IronGate repository root. If the Rust target or Cargo dependencies are not already cached:</p>
+  <pre>rustup target add x86_64-unknown-linux-musl
+cargo fetch --locked</pre>
+  <p class="note"><strong>Note:</strong> The project does not install missing host tools or repair KVM permissions automatically. Use the repository’s <code>docs/qemu-first-boot.md</code> for host setup background.</p>
+
+  <h2><span>2</span> Prepare the lab images once</h2>
+  <pre>just vm-lab-prepare
+just vm-portal-prepare
+just vm-https-prepare
+just vm-radius-prepare</pre>
+  <p>Run these in order. They build on the pinned Debian image and prepare separate guest images. Preparation uses QEMU userspace NAT to download guest packages; it creates no host bridge or TAP device. Existing verified prepared images are reused.</p>
+
+  <h2><span>3</span> Run the complete accounting demonstration</h2>
+  <pre>just vm-accounting-test</pre>
+  <p>The command builds the static daemon, boots a fresh overlay, runs the guest browser and backend tests, retains evidence, then powers off the VM. Test boots use <code>-nic none</code>; workstation interfaces, routes, firewall and trust settings are unchanged. Run one VM test at a time.</p>
+  <div class="topology" aria-label="Three network namespaces inside one QEMU guest">
+    <div><strong>CLIENT</strong><br>10.50.10.100</div><b>↔</b><div><strong>IRONGATE</strong><br>10.50.10.1 / 192.0.2.1</div><b>↔</b><div><strong>UPSTREAM / RADIUS</strong><br>192.0.2.80</div>
+  </div>
+  <p class="note">All three endpoints are guest network namespaces linked by virtual Ethernet. Userspace enforces access; a persistent nftables guard blocks alternate kernel transit.</p>
+  <footer><span>IronGate · Lab alpha QSG · Based on runtime 880a27d</span><span>1 / 2</span></footer>
+</section>
+
+<section class="page">
+  <header><div class="brand">IronGate</div><div class="document">VERIFY &amp; TROUBLESHOOT<br>Keep the report with the result</div></header>
+  <h2 class="first"><span>4</span> Verify successful operation</h2>
+  <p>The final console line must begin with <code>passed:</code> and identify a <code>report.json</code>. A completed accounting run passes <strong>18 scenarios</strong>, including these checks:</p>
+  <table class="checks">
+    <thead><tr><th>Check</th><th>Expected result</th></tr></thead>
+    <tbody>
+      <tr><td>Join and sign in</td><td>DHCP gives 10.50.10.100; upstream transit is blocked before login and available after a valid RADIUS Accept.</td></tr>
+      <tr><td>Account and disconnect</td><td>Matching Start / Interim / Stop records; directional totals agree with the independent workload; logout blocks access immediately.</td></tr>
+      <tr><td>Lose the accounting backend</td><td>Backlog becomes visible and new admission pauses. Existing access retains its original expiry. Requested logout still works; pending Stop drains after recovery.</td></tr>
+      <tr><td>Guard the packet path</td><td>Spoof attempts and kernel bypass are blocked. HTTPS certificate and bounded-worker checks pass.</td></tr>
+    </tbody>
+  </table>
+  <p>Open the directory printed by the command:</p>
+  <pre>target/vm/packet-lab/runs/RUN_ID/</pre>
+  <p class="note">Replace <code>RUN_ID</code> with the printed run identity. Inspect <code>report.json</code>, <code>serial.log</code>, <code>evidence.log</code> and the three <code>portal-*.png</code> screenshots. Reports record source revision, dirty state, binary identity and individual outcomes. A new run does not automatically include the separately collected release quality bundle.</p>
+
+  <h2><span>5</span> Know the configuration boundary</h2>
+  <div class="columns">
+    <div>
+      <h3>Automated lab settings</h3>
+      <p>The harness generates private HTTPS/RADIUS configuration and fresh test secrets inside the guest. It uses this accounting block:</p>
+      <pre>accounting = "radius"
+accounting_endpoint = "192.0.2.80:1813"
+accounting_interim_seconds = 2</pre>
+    </div>
+    <div>
+      <h3>Portal and test identity</h3>
+      <p>Guest portal: <code>https://10.50.10.1:8443</code><br>Test user: <code>lab-user</code><br>Test password: <code>lab-pass</code></p>
+      <p class="note">The harness signs in automatically with normal certificate verification. The portal is not exposed to your workstation browser. These are public fixture credentials, not appliance login credentials.</p>
+    </div>
+  </div>
+  <p class="note"><strong>Important:</strong> This native lab TOML is distinct from the example deployment profiles. <code>ig config check</code> validates those profiles offline; <code>ig doctor</code> currently checks host interfaces, not live RADIUS/accounting health. Normal gateway deployment is still pending.</p>
+
+  <h2><span>6</span> Resolve common startup issues</h2>
+  <table class="troubleshoot">
+    <thead><tr><th>Symptom</th><th>Action</th></tr></thead>
+    <tbody>
+      <tr><td>KVM inaccessible / tool missing</td><td>Verify installed host prerequisites and access to <code>/dev/kvm</code>. An agent sandbox may need approval for the QEMU command.</td></tr>
+      <tr><td>Missing prepared manifest</td><td>Run all four preparation commands in Step 2, in order.</td></tr>
+      <tr><td>Offline build lacks a crate</td><td>Run <code>cargo fetch --locked</code> with network access, then rerun the test.</td></tr>
+      <tr><td>Image digest mismatch</td><td>Keep the failed evidence and investigate the modified image. Do not bypass the digest check.</td></tr>
+      <tr><td>Failed scenario / no final result</td><td>Read <code>report.json</code> and the retained logs. Reproduce with a fresh run; keep the failed run for comparison.</td></tr>
+    </tbody>
+  </table>
+  <p class="note"><strong>Operational limit:</strong> Accounting has four fixed lifecycle slots and bounded retries. Its outbox is memory-only; pending records may be lost on a crash. Protocol acknowledgments do not establish durable billing or production capacity. Keep guest disks, seeds and private configuration out of public evidence bundles.</p>
+  <footer><span>Details: docs/radius-accounting.md · docs/handoff.md · docs/lab-alpha.md</span><span>2 / 2</span></footer>
+</section>
+</body>
+</html>

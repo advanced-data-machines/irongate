@@ -1,0 +1,35 @@
+@page { size: Letter; margin: 0; }
+* { box-sizing: border-box; }
+body { margin: 0; background: #e8edf1; color: #233342; font-family: Arial, Helvetica, sans-serif; }
+.page { width: 8.5in; height: 11in; padding: .4in .5in .32in; background: white; display: flex; flex-direction: column; break-after: page; }
+.page:last-child { break-after: auto; }
+header { display: flex; justify-content: space-between; align-items: center; border-bottom: 3px solid #0879b0; padding-bottom: 9px; }
+.brand { font-size: 27px; font-weight: 800; letter-spacing: -.8px; color: #073d61; }
+.document { text-align: right; font-size: 9px; line-height: 1.5; letter-spacing: .6px; color: #4e6371; }
+h1 { color: #073d61; font-size: 29px; line-height: 1.1; letter-spacing: -.6px; margin: 15px 0 9px; }
+h2 { font-size: 14px; line-height: 1.7; color: #073d61; margin: 11px 0 6px; }
+h2.first { margin-top: 15px; }
+h2 span { display: inline-block; width: 23px; height: 23px; text-align: center; background: #0879b0; color: white; margin-right: 7px; font-size: 13px; }
+h3 { font-size: 11px; color: #073d61; margin: 0 0 6px; }
+p { font-size: 10.8px; line-height: 1.4; margin: 0 0 7px; }
+p.intro { font-size: 12px; line-height: 1.4; }
+aside { background: #eaf3f9; border-left: 4px solid #0879b0; font-size: 10.5px; line-height: 1.4; padding: 9px 11px; margin: 2px 0 0; }
+aside strong { margin-right: 5px; color: #073d61; }
+code { font-family: 'DejaVu Sans Mono', 'Liberation Mono', monospace; font-size: .91em; }
+pre { background: #f0f4f7; border-left: 3px solid #7499b0; padding: 8px 11px; margin: 3px 0 8px; font-family: 'DejaVu Sans Mono', 'Liberation Mono', monospace; font-size: 10px; line-height: 1.5; white-space: pre-wrap; }
+table { border-collapse: collapse; width: 100%; margin: 0 0 8px; font-size: 10.3px; line-height: 1.35; }
+th { text-align: left; color: #073d61; background: #eaf1f6; }
+th, td { padding: 6px 8px; vertical-align: top; border-bottom: 1px solid #d5e0e8; }
+tbody th, td:first-child { width: 26%; font-weight: 700; }
+.note { font-size: 9.4px; line-height: 1.4; color: #4c6171; }
+.topology { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 5px 0 7px; }
+.topology div { flex: 1; text-align: center; background: #eaf3f9; padding: 8px 4px; font-size: 9.2px; line-height: 1.6; }
+.topology b { color: #0879b0; }
+.columns { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.columns pre { font-size: 8.8px; }
+.checks td { padding: 5px 8px; }
+.troubleshoot { font-size: 9.8px; }
+.troubleshoot th, .troubleshoot td { padding: 5px 8px; }
+footer { margin-top: auto; display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid #c9d6e0; padding-top: 8px; color: #4c6171; font-size: 8px; line-height: 1.4; }
+@media screen { .page { margin: 20px auto; box-shadow: 0 2px 12px #17304822; } }
+@media print { body { background: white; print-color-adjust: exact; -webkit-print-color-adjust: exact; } }

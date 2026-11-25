@@ -133,3 +133,7 @@ vm-radius-test:
 vm-accounting-test:
     cargo build -p irongated --release --target x86_64-unknown-linux-musl --offline
     python3 -m tools.vm.lab.run --accounting
+
+# Render the two-page QEMU quick start guide as a PDF.
+qsg:
+    python3 scripts/render-brochure.py docs/irongate-quick-start.html

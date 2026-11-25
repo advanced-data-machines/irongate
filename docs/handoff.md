@@ -2,6 +2,8 @@
 
 Current branch: `release/0.1.x`. Accounting runtime `880a27d` and its evidence documentation `f3a0956` were integrated by fast-forward; a documentation-only commit records that integration. Authentication remains integrated/tagged at `84abe82` / `checkpoint/radius-login`. Check Git status/history before resuming. Do not push, tag a new release, delete branches or change workstation networking without authorization.
 
+A two-page lab Quick Start Guide is saved as `docs/irongate-quick-start.pdf`, with editable HTML/CSS alongside it. Rebuild with `just qsg` using installed headless Chrome/Chromium. It covers the full preparation chain, automated accounting run, expected results and troubleshooting.
+
 ## Current checkpoint and next action
 
 - The second [lab-alpha increment](lab-alpha.md) is implemented: real RADIUS Start/Interim/Stop, boot-unique lifecycle IDs, per-session directional submitted IP octets, four fixed lifecycle slots with reserved Stop capacity, one dedicated bounded worker and observable outage/backlog/recovery.
